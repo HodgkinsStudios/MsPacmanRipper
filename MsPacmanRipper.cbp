@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+  <FileVersion major="1" minor="6" />
+  <Project>
+    <Option title="MsPacmanRipper" />
+    <Option pch_mode="2" />
+    <Option compiler="gcc" />
+    <Build>
+      <Target title="Release">
+        <Option output="bin/MsPacmanRipper" prefix_auto="0" extension_auto="0" />
+        <Option object_output="obj" />
+        <Option type="1" />
+        <Option compiler="gcc" />
+        <Compiler>
+          <Add option="-O2" />
+          <Add option="-Wall" />
+          <Add option="-Wextra" />
+          <Add option="-Wpedantic" />
+          <Add option="-Werror" />
+          <Add option="-std=c++17" />
+          <Add directory="src" />
+        </Compiler>
+      </Target>
+    </Build>
+    <Unit filename="src/main.cpp" />
+    <Unit filename="src/Version.h" />
+    <Unit filename="src/crypto/Hash.h" /><Unit filename="src/crypto/Hash.cpp" />
+    <Unit filename="src/rom/RomSet.h" /><Unit filename="src/rom/RomSet.cpp" />
+    <Unit filename="src/mspacman/Daughterboard.h" /><Unit filename="src/mspacman/Daughterboard.cpp" />
+    <Unit filename="src/disasm/Z80Disassembler.h" /><Unit filename="src/disasm/Z80Disassembler.cpp" />
+    <Unit filename="src/analysis/PacmanCertifiedBoundaries.h" />
+    <Unit filename="src/analysis/PacmanCertifiedInlineRanges.h" />
+    <Unit filename="src/analysis/StatefulAnalyzer.h" /><Unit filename="src/analysis/StatefulAnalyzer.cpp" />
+    <Unit filename="src/semantic/SemanticCatalog.h" /><Unit filename="src/semantic/SemanticCatalog.cpp" />
+    <Unit filename="src/semantic/PacmanSemanticFamilies.h" /><Unit filename="src/semantic/PacmanSemanticFamilies.cpp" />
+    <Extensions><code_completion /><debugger /></Extensions>
+  </Project>
+</CodeBlocks_project_file>

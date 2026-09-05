@@ -1,0 +1,17 @@
+MsPacmanRipper 1.0.0 source-only project
+Created by Jacob Hodgkins
+
+Included:
+- C++17 ROM validation, daughterboard decode, Z80 disassembler, stateful analyzer, and semantic tables
+- Code::Blocks project
+- Ubuntu build and run scripts
+- complete structured disassembly exporter
+- ROM-free semantic evidence required by the exporter
+- GitHub build workflow
+- public release documentation, license, legal notice, changelog, contribution guide, and security policy
+
+Excluded:
+- Ms. Pac-Man ROM/PROM binaries
+- pre-generated ROM-derived disassembly output
+- reconstructed game binaries
+- compiler output and local IDE state
