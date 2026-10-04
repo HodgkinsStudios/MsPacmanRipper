@@ -140,31 +140,6 @@ The complete export includes:
 - byte ownership for the full physical set;
 - reconstruction source and optional exact round-trip verification.
 
-## Verified release status
-
-Version 1.3.0 has been verified across all supported distribution paths.
-
-| Check | Result |
-| --- | ---: |
-| Canonical files recognized | 13/13 |
-| Canonical bytes recognized | 35,616/35,616 |
-| Full export | PASS |
-| Exported files | 60 |
-| `program/mspacman.asm` | 19,541 lines |
-| Board byte-ownership rows | 35,616 |
-| Windows build/package regression | PASS |
-| Apple Silicon build/CMake/ZIP path | PASS |
-| Intel macOS build/CMake/ZIP path | PASS |
-| Universal macOS package | PASS |
-| Docker linux/amd64 | PASS |
-| Docker linux/arm64 | PASS |
-| Multi-architecture GHCR image | PASS |
-| Portable OCI archive | PASS |
-
-The established reconstruction certification remains **13/13 physical files and 35,616/35,616 bytes exact** when SjASMPlus verification is enabled.
-
-See [TEST_REPORT.md](TEST_REPORT.md) for the detailed verification record.
-
 ## Docker image
 
 Published image:
