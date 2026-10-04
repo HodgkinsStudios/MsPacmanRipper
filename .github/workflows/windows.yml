@@ -52,20 +52,25 @@ jobs:
           Write-Host "Windows ZIP loader reached canonical validation as expected."
           exit 0
 
-      - name: Upload Windows executable
+      - name: Assemble runnable Windows package
+        if: success()
+        shell: pwsh
+        run: |
+          $root = "dist/MsPacmanRipper"
+          New-Item -ItemType Directory -Force "$root/bin" | Out-Null
+          Copy-Item build/bin/MsPacmanRipper.exe "$root/bin/MsPacmanRipper.exe"
+          Copy-Item scripts "$root/scripts" -Recurse
+          Copy-Item evidence "$root/evidence" -Recurse
+          Copy-Item README.md, LICENSE, LEGAL.md, VERSION, run_windows.bat "$root/"
+
+      - name: Smoke test packaged runtime
+        if: success()
+        shell: pwsh
+        run: .\dist\MsPacmanRipper\bin\MsPacmanRipper.exe --version
+
+      - name: Upload runnable Windows package
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MsPacmanRipper-Windows
-          path: build/bin/MsPacmanRipper.exe
-
-      - name: Upload source snapshot for cross-platform verification
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MsPacmanRipper-source
-          path: |
-            .
-            !.git
-            !build
-          include-hidden-files: true
+          path: dist/MsPacmanRipper
