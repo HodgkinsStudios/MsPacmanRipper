@@ -1,9 +1,11 @@
 # MsPacmanRipper
 
 **Created by Jacob Hodgkins**  
-**Version 1.2.0**
+**Version 1.3.0**
 
-MsPacmanRipper is a standalone C++17 command-line tool for **macOS, Windows, and Ubuntu/Linux** that produces a complete structured disassembly of the supported canonical Ms. Pac-Man arcade ROM/PROM set. All three platforms use the same analyzer, ROM validation, daughterboard model, semantic pipeline, and output format.
+MsPacmanRipper is a standalone C++17 command-line tool for **macOS, Windows, Ubuntu/Linux, and containerized Linux environments** that produces a complete structured disassembly of the supported canonical Ms. Pac-Man arcade ROM/PROM set.
+
+The native builds and Docker image all use the same analyzer, ROM validation, daughterboard model, semantic pipeline, and output format.
 
 ## Features
 
@@ -17,68 +19,155 @@ Given the canonical 13-file `mspacman.zip` or a directory containing the same 13
 - complete 13-device board manifest and byte ownership;
 - reconstruction scripts and verification material capable of rebuilding all 13 physical ROM/PROM files exactly.
 
-The public source package contains **no Ms. Pac-Man ROM/PROM data** and no pre-generated ROM-derived disassembly tree.
+The public source, release artifacts, and container image contain **no Ms. Pac-Man ROM/PROM data** and no pre-generated ROM-derived disassembly tree.
 
-## macOS
+# Docker / other Linux distributions
 
-Version 1.2.0 adds first-class support for both **Apple Silicon (arm64)** and **Intel (x86_64)** Macs.
+Version 1.3.0 adds a distro-independent Linux distribution path through Docker-compatible containers.
 
-### Requirements
+The published image uses a Debian Bookworm Slim runtime internally, so the host distribution does not need the exact compiler, Python, or `unzip` versions used by MsPacmanRipper. A working Docker-compatible container engine is the main host requirement.
+
+Supported published Linux architectures:
+
+- `linux/amd64` — normal Intel/AMD 64-bit PCs;
+- `linux/arm64` — 64-bit ARM Linux systems.
+
+The same image tag automatically selects the correct architecture.
+
+## Pull the image
+
+```bash
+docker pull ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0
+```
+
+The moving tag is:
+
+```bash
+docker pull ghcr.io/hodgkinsstudios/mspacmanripper:latest
+```
+
+The 1.3.0 multi-architecture manifest is published by GitHub Actions and contains both `linux/amd64` and `linux/arm64`.
+
+If your GHCR client requests authentication because of registry/package visibility settings, authenticate to `ghcr.io` first and repeat the pull.
+
+## Easiest Linux usage
+
+The repository includes `run_docker.sh`. It accepts either the ZIP file or a directory containing the 13 canonical files:
+
+```bash
+chmod +x run_docker.sh
+./run_docker.sh /path/to/mspacman.zip /path/to/output
+```
+
+or:
+
+```bash
+./run_docker.sh /path/to/extracted-rom-directory /path/to/output
+```
+
+The helper:
+
+- automatically uses `ghcr.io/hodgkinsstudios/mspacmanripper:latest` unless overridden;
+- mounts ROM input read-only;
+- mounts only the selected output directory read/write;
+- runs the container as the current host UID/GID so generated files are not left owned by root;
+- automatically adds an SELinux `:Z` mount label on SELinux hosts such as Fedora/RHEL when appropriate;
+- can use Podman instead of Docker.
+
+Use Podman:
+
+```bash
+CONTAINER_ENGINE=podman ./run_docker.sh /path/to/mspacman.zip /path/to/output
+```
+
+Pin a particular image:
+
+```bash
+MSPACMANRIPPER_IMAGE=ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0 \
+  ./run_docker.sh /path/to/mspacman.zip /path/to/output
+```
+
+## Direct Docker invocation
+
+```bash
+mkdir -p output
+
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/mspacman.zip:/input/mspacman.zip:ro" \
+  -v "$PWD/output:/output" \
+  ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0 \
+  /input/mspacman.zip /output
+```
+
+On an SELinux-enforcing host, use `:Z` on the bind mounts or use `run_docker.sh`, which handles that automatically.
+
+## Build the image locally
+
+No registry access is required if you want to build it yourself:
+
+```bash
+docker build \
+  --build-arg MSPACMANRIPPER_VERSION=1.3.0 \
+  -t mspacripper:local .
+```
+
+Then:
+
+```bash
+MSPACMANRIPPER_IMAGE=mspacripper:local \
+  ./run_docker.sh /path/to/mspacman.zip /path/to/output
+```
+
+The Dockerfile is multi-stage. CMake/GCC/build tools stay in the build stage; the runtime stage contains the MsPacmanRipper executable plus Python 3, `unzip`, `scripts/`, `evidence/`, and the project documentation required by the normal export pipeline.
+
+## Portable OCI archive
+
+Every successful main-branch Docker workflow also uploads:
+
+```text
+MsPacmanRipper-linux-multiarch-oci
+```
+
+This contains a multi-architecture OCI image archive with the amd64 and arm64 image variants. It is useful for offline transfer or OCI-compatible tooling when pulling from GHCR is undesirable.
+
+# macOS
+
+Version 1.2.0 added first-class support for both **Apple Silicon (arm64)** and **Intel (x86_64)** Macs.
+
+## macOS requirements
 
 - macOS 11 or newer;
 - Xcode Command Line Tools;
 - Python 3;
-- the system `/usr/bin/unzip`, used directly for ZIP input.
+- system `/usr/bin/unzip`.
 
-Install the Apple compiler tools if needed:
+Install the compiler tools if needed:
 
 ```bash
 xcode-select --install
 ```
 
-Python 3 can be supplied by any normal Python installation. The project does not require Homebrew or MacPorts libraries.
-
-### Native build
+## Native macOS build
 
 ```bash
 chmod +x build_macos.sh run_macos.sh
 ./build_macos.sh
 ```
 
-`build_macos.sh` uses Apple `clang++` through `xcrun`, the active macOS SDK, C++17, and a macOS 11 deployment target. By default it builds for the architecture of the current Mac.
-
-The output is:
-
-```text
-bin/MsPacmanRipper
-```
-
-Run it with:
+Run:
 
 ```bash
 ./run_macos.sh /path/to/mspacman.zip /path/to/output
 ```
 
-or:
+`build_macos.sh` uses Apple `clang++` through `xcrun`, the active macOS SDK, C++17, and a macOS 11 deployment target.
 
-```bash
-./bin/MsPacmanRipper /path/to/mspacman.zip /path/to/output
-```
+## Code::Blocks on macOS
 
-The build script also supports an explicit architecture when the installed Apple toolchain supports it:
+Open `MsPacmanRipper.cbp` and use the **Release macOS** target with a configured Clang compiler.
 
-```bash
-MSPACMANRIPPER_MACOS_ARCHS=arm64 ./build_macos.sh
-MSPACMANRIPPER_MACOS_ARCHS=x86_64 ./build_macos.sh
-```
-
-For ordinary local builds, leave this unset and use the native default.
-
-### Code::Blocks on macOS
-
-Open `MsPacmanRipper.cbp` and use the **Release macOS** target with a configured Clang compiler. The target builds a native executable and uses the macOS 11 deployment target.
-
-### CMake on macOS
+## CMake on macOS
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
@@ -86,68 +175,37 @@ cmake --build build --config Release
 ./build/bin/MsPacmanRipper /path/to/mspacman.zip /path/to/output
 ```
 
-### Universal Intel + Apple Silicon package
+## Universal Intel + Apple Silicon package
 
-The macOS GitHub Actions workflow builds the project **natively on an Apple Silicon runner and natively on an Intel runner**, verifies each architecture independently, and then combines the two verified Mach-O slices with `lipo`.
+The macOS GitHub Actions workflow builds the project natively on both Apple Silicon and Intel, verifies each architecture independently, and combines the verified slices with `lipo`.
 
-The final artifact is named:
+The final CI artifact is:
 
 ```text
 MsPacmanRipper-macOS-universal
 ```
 
-It contains `MsPacmanRipper-macOS-universal.tar.gz`, whose runtime/source layout includes:
+The universal executable is ad-hoc signed rather than Developer ID signed/notarized.
 
-```text
-MsPacmanRipper/
-├── bin/MsPacmanRipper
-├── scripts/
-├── evidence/
-├── src/
-├── CMakeLists.txt
-├── MsPacmanRipper.cbp
-├── build_macos.sh
-├── run_macos.sh
-├── README.md
-├── LICENSE
-├── LEGAL.md
-└── VERSION
-```
+# Windows
 
-The universal executable contains both `arm64` and `x86_64` slices. CI verifies its architecture list, code signature, packaged runtime, native ZIP loading, and that the native binaries do not link against Homebrew/MacPorts-style runtime paths.
-
-The CI artifact is **ad-hoc signed**, not Apple Developer ID signed or notarized. A quarantined download can therefore require explicit approval in macOS Privacy & Security. Building from source on the Mac avoids distribution-signing requirements.
-
-## Windows
-
-### Requirements
+## Requirements
 
 - Windows 10 or Windows 11;
 - Python 3 available as `python` or `python3`;
 - for source builds: Code::Blocks + MinGW/GCC, another `g++` toolchain, Visual Studio Developer Command Prompt, or CMake;
-- Windows `tar.exe`, used to stream ZIP members without a third-party ZIP library.
+- Windows `tar.exe`.
 
-### Build from Command Prompt
+## Build and run
 
 ```bat
 build_windows.bat
-```
-
-Run:
-
-```bat
 run_windows.bat "C:\path\to\mspacman.zip" "C:\path\to\output"
-```
-
-or:
-
-```bat
-bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
 ```
 
 In Code::Blocks, open `MsPacmanRipper.cbp` and build the **Release Windows** target.
 
-### CMake on Windows
+## CMake on Windows
 
 ```bat
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -155,9 +213,7 @@ cmake --build build --config Release
 build\bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
 ```
 
-The Windows workflow builds on `windows-latest`, checks the Python helpers, compiles the executable, smoke-tests ZIP loading, and publishes a runnable package with the required `scripts/` and `evidence/` runtime assets.
-
-## Ubuntu/Linux
+# Native Ubuntu/Linux
 
 Install the normal build/runtime requirements:
 
@@ -165,21 +221,16 @@ Install the normal build/runtime requirements:
 sudo apt install build-essential unzip python3
 ```
 
-Build:
+Build and run:
 
 ```bash
 ./build.sh
-```
-
-Run:
-
-```bash
 ./run.sh /path/to/mspacman.zip /path/to/output
 ```
 
-In Code::Blocks, open `MsPacmanRipper.cbp` and build the **Release** target.
+For Fedora, Arch, openSUSE, Alpine, and other Linux distributions, the Docker path is the supported distribution-independent option if you do not want to adapt the native package names/toolchain.
 
-## Cross-platform CMake
+# Cross-platform CMake
 
 ```text
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -188,27 +239,24 @@ cmake --build build --config Release
 
 The executable is normally `build/bin/MsPacmanRipper` on macOS/Linux and `build\bin\MsPacmanRipper.exe` on Windows.
 
-## Verification status
+# Verification status
 
-Version 1.2.0 has been verified against the current shared source:
+Version 1.3.0 verification includes:
 
 - canonical files validated: **13/13**;
 - canonical bytes validated: **35,616/35,616**;
-- normal full-disassembly export: **VERIFIED**;
-- normal export output files: **60**;
-- primary `program/mspacman.asm`: **19,541 lines**;
-- board byte-ownership rows: **35,616**;
-- current source from the macOS universal package re-built on Linux and completed the canonical full export: **VERIFIED**;
-- Apple Silicon direct Clang build: **VERIFIED**;
-- Apple Silicon CMake build: **VERIFIED**;
-- Apple Silicon ZIP-loader path: **VERIFIED**;
-- Intel direct Clang build: **VERIFIED**;
-- Intel CMake build: **VERIFIED**;
-- Intel ZIP-loader path: **VERIFIED**;
-- universal `arm64 + x86_64` Mach-O assembly and packaged-runtime test: **VERIFIED**;
-- Windows CI still passes on the same 1.2.0 source: **VERIFIED**.
-
-GitHub Actions intentionally does not contain or redistribute the copyrighted ROM/PROM set. Public CI therefore uses synthetic ZIP data to exercise platform-specific archive loading; the canonical 13-file full-export regression was performed separately with the supplied canonical set.
+- full canonical export from the packaged Docker amd64 root filesystem: **VERIFIED**;
+- Docker canonical output files: **60**;
+- Docker canonical `program/mspacman.asm`: **19,541 lines**;
+- Docker canonical board byte-ownership rows: **35,616**;
+- native `linux/amd64` Docker build and execution: **VERIFIED**;
+- native `linux/arm64` Docker build and execution: **VERIFIED**;
+- Docker ZIP-loader validation path on both architectures: **VERIFIED**;
+- host-UID/GID `run_docker.sh` helper on both architectures: **VERIFIED**;
+- published multi-architecture GHCR manifest: **VERIFIED**;
+- portable multi-architecture OCI artifact: **VERIFIED**;
+- Windows CI regression on 1.3.0: **VERIFIED**;
+- macOS Apple Silicon/Intel/universal regression: **VERIFIED**.
 
 The established exact-reconstruction certification remains:
 
@@ -219,9 +267,11 @@ The established exact-reconstruction certification remains:
 - semantic DATA bytes represented: **12,382/12,382**;
 - program/daughterboard physical bytes represented: **26,624/26,624**.
 
-See `TEST_REPORT.md` for the verification record.
+Public GitHub Actions does not contain or redistribute copyrighted Ms. Pac-Man ROM/PROM data. Public container CI therefore uses synthetic non-canonical ZIP data to test archive loading, while the complete canonical regression is performed separately.
 
-## Canonical input
+See `TEST_REPORT.md` for the detailed verification record.
+
+# Canonical input
 
 The supported set contains exactly these 13 members:
 
@@ -229,7 +279,7 @@ The supported set contains exactly these 13 members:
 
 MsPacmanRipper validates file size, CRC32, and SHA-256 before disassembling and rejects an incomplete or non-canonical set.
 
-## Help and version
+# Help and version
 
 macOS/Linux:
 
@@ -245,54 +295,53 @@ bin\MsPacmanRipper.exe --help
 bin\MsPacmanRipper.exe --version
 ```
 
-## Optional immediate reconstruction verification
-
-SjASMPlus is optional for normal export. If the `SJASMPLUS` environment variable points to a SjASMPlus executable, the exporter performs an immediate exact 13-file reconstruction verification after export.
-
-macOS/Linux example:
+Docker:
 
 ```bash
-SJASMPLUS=/path/to/sjasmplus ./bin/MsPacmanRipper /path/to/mspacman.zip /path/to/output
+docker run --rm ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0 --help
+docker run --rm ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0 --version
 ```
 
-Windows Command Prompt example:
+# Optional immediate reconstruction verification
 
-```bat
-set "SJASMPLUS=C:\path\to\sjasmplus.exe"
-bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
-```
+SjASMPlus is optional for normal native export. If `SJASMPLUS` points to a SjASMPlus executable, the exporter performs the exact reconstruction verification.
 
-## Repository layout
+For the container image, SjASMPlus is not bundled in the standard runtime image.
+
+# Repository layout
 
 ```text
 MsPacmanRipper/
-├── .github/workflows/     Windows and macOS build/package verification
+├── .github/workflows/     Windows, macOS, and Docker verification/publishing
 ├── evidence/              ROM-free semantic metadata used by the exporter
 ├── scripts/               structured export and reconstruction verification tools
 ├── src/                   C++17 source
+├── Dockerfile             multi-stage Linux container image
+├── .dockerignore          ROM/build-output-safe container build context exclusions
+├── run_docker.sh          Docker/Podman launcher with UID/GID + SELinux handling
 ├── CMakeLists.txt         cross-platform CMake build
 ├── MsPacmanRipper.cbp     Linux, Windows, and macOS Code::Blocks targets
 ├── VERSION                release version
-├── build.sh               Ubuntu/Linux command-line build
-├── run.sh                 Ubuntu/Linux build-if-needed launcher
+├── build.sh               Ubuntu/Linux build
+├── run.sh                 Ubuntu/Linux launcher
 ├── build_windows.bat      Windows build
 ├── run_windows.bat        Windows launcher
 ├── build_macos.sh         native macOS Apple Clang build
-└── run_macos.sh           macOS build-if-needed launcher
+└── run_macos.sh           macOS launcher
 ```
 
-## Implementation notes
+# Implementation notes
 
-The public program has one normal job and one normal invocation: complete Ms. Pac-Man disassembly. Two `--internal-*` subprocess entry points are implementation plumbing used by the bundled structured exporter.
+The ROM loader uses C++17 `std::filesystem` on all supported platforms. ZIP streaming uses `unzip` on native/container Linux, the built-in `tar.exe` on Windows, and system `/usr/bin/unzip` on macOS.
 
-The ROM loader uses C++17 `std::filesystem` on all supported platforms. ZIP streaming uses `unzip` on Linux, the built-in `tar.exe` on Windows, and the system `/usr/bin/unzip` on macOS. Python helper scripts are launched through the active Python interpreter.
+The container runtime sets `HOME=/tmp`, disables Python bytecode generation, and keeps ROM input outside the image through read-only bind mounts.
 
-## License and third-party material
+# License and third-party material
 
 MsPacmanRipper source code is released under the MIT License. See `LICENSE`.
 
-No game ROM/PROM data is distributed with the project. See `LEGAL.md` for the project disclaimer and the boundary between the MsPacmanRipper source license and third-party game material.
+No game ROM/PROM data is distributed with the project, the Docker image, or CI artifacts. See `LEGAL.md`.
 
-## Contributing and security
+# Contributing and security
 
-See `CONTRIBUTING.md` for contribution guidance and `SECURITY.md` for security reporting guidance.
+See `CONTRIBUTING.md` and `SECURITY.md`.

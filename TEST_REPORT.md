@@ -1,74 +1,95 @@
-# MsPacmanRipper 1.2.0 Verification Report
+# MsPacmanRipper 1.3.0 Verification Report
 
 **Created by Jacob Hodgkins**
 
 ## Canonical full-export regression
 
-Verification used the exact source tree bundled inside the final macOS universal artifact.
+The canonical 13-file test set was kept local and was not uploaded to public GitHub Actions.
 
-- `--version` reporting `MsPacmanRipper 1.2.0`: **VERIFIED**.
-- Canonical 13-member set identity: **13/13 VERIFIED**.
-- Canonical total bytes: **35,616/35,616 VERIFIED**.
-- Standalone full-disassembly export: **VERIFIED**.
-- Normal export output files: **60**.
-- Primary human-readable source `program/mspacman.asm`: **19,541 lines**.
-- Board byte ownership rows: **35,616**.
+The exact amd64 runtime root filesystem from the generated multi-architecture OCI artifact was extracted and executed locally.
 
-The macOS port changes do not create a second analyzer or exporter. macOS, Windows, and Linux use the same core source and structured export pipeline.
+Results:
 
-## macOS Apple Silicon verification
+- `MsPacmanRipper 1.3.0`: **VERIFIED**.
+- Canonical set identity: **13/13 VERIFIED**.
+- Canonical bytes: **35,616/35,616 VERIFIED**.
+- Full disassembly export: **VERIFIED**.
+- Output files: **60**.
+- `program/mspacman.asm`: **19,541 lines**.
+- `manifest/board_byte_ownership.csv`: **35,616 data rows**.
 
-GitHub Actions runner: native `arm64` macOS.
+This verifies the executable and runtime filesystem actually packaged by the container build, including its bundled Python/export pipeline and Linux ZIP handling.
 
-- Python helper scripts compile: **VERIFIED**.
-- Apple `clang++` direct build through `xcrun`: **VERIFIED**.
-- Active macOS SDK discovery: **VERIFIED**.
-- Native architecture output: **arm64 VERIFIED**.
-- `--version` and `--help`: **VERIFIED**.
-- Ad-hoc code signature: **VERIFIED**.
-- No Homebrew/MacPorts runtime-library path dependency: **VERIFIED**.
-- Native CMake build: **VERIFIED**.
-- ZIP streaming through `/usr/bin/unzip` reaches canonical validation: **VERIFIED**.
-- Architecture slice artifact: **VERIFIED**.
+## Docker linux/amd64 verification
 
-## macOS Intel verification
+GitHub Actions runner: native x86-64 Ubuntu Linux.
 
-GitHub Actions runner: native `x86_64` macOS.
+- Docker Buildx setup: **VERIFIED**.
+- Native amd64 image build: **VERIFIED**.
+- Container architecture reports `x86_64`: **VERIFIED**.
+- `--version`: **VERIFIED**.
+- `--help`: **VERIFIED**.
+- Synthetic ZIP input reaches canonical validation: **VERIFIED**.
+- `run_docker.sh` host-user execution: **VERIFIED**.
+- Helper output directory host ownership: **VERIFIED**.
 
-- Python helper scripts compile: **VERIFIED**.
-- Apple `clang++` direct build through `xcrun`: **VERIFIED**.
-- Active macOS SDK discovery: **VERIFIED**.
-- Native architecture output: **x86_64 VERIFIED**.
-- `--version` and `--help`: **VERIFIED**.
-- Ad-hoc code signature: **VERIFIED**.
-- No Homebrew/MacPorts runtime-library path dependency: **VERIFIED**.
-- Native CMake build: **VERIFIED**.
-- ZIP streaming through `/usr/bin/unzip` reaches canonical validation: **VERIFIED**.
-- Architecture slice artifact: **VERIFIED**.
+## Docker linux/arm64 verification
 
-## macOS universal package verification
+GitHub Actions runner: native ARM64 Ubuntu Linux.
 
-The final universal binary is assembled with `lipo` from the two independently verified native slices.
+- Docker Buildx setup: **VERIFIED**.
+- Native arm64 image build: **VERIFIED**.
+- Container architecture reports `aarch64`: **VERIFIED**.
+- `--version`: **VERIFIED**.
+- `--help`: **VERIFIED**.
+- Synthetic ZIP input reaches canonical validation: **VERIFIED**.
+- `run_docker.sh` host-user execution: **VERIFIED**.
+- Helper output directory host ownership: **VERIFIED**.
 
-- `arm64` slice present: **VERIFIED**.
-- `x86_64` slice present: **VERIFIED**.
-- Universal binary ad-hoc code signature: **VERIFIED**.
-- Runnable `.tar.gz` package assembly: **VERIFIED**.
-- Package extraction: **VERIFIED**.
-- Packaged executable `--version`: **VERIFIED**.
-- Packaged universal architecture check: **VERIFIED**.
-- Final artifact: `MsPacmanRipper-macOS-universal`.
+## Multi-architecture publishing
 
-The artifact is not Developer ID signed or notarized; no Apple signing credential is stored in the public project.
+The workflow publishes:
+
+- `ghcr.io/hodgkinsstudios/mspacmanripper:latest`;
+- `ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0`;
+- a source-SHA tag.
+
+The published OCI index is verified to include both `linux/amd64` and `linux/arm64`.
+
+A portable multi-architecture OCI archive is also produced and uploaded as the `MsPacmanRipper-linux-multiarch-oci` Actions artifact.
+
+The public pipeline contains no Ms. Pac-Man ROM/PROM files.
+
+## Container security/packaging boundary
+
+- ROM files are not copied into the Docker image.
+- `.dockerignore` excludes archive and ROM-style binary inputs from the build context.
+- Runtime image includes only the executable, ROM-free `scripts/` and `evidence/`, documentation, Python 3, `unzip`, and runtime dependencies.
+- Build tools stay in the build stage.
+- `run_docker.sh` mounts the selected input read-only.
+- `run_docker.sh` uses the host UID/GID for output ownership.
+- SELinux bind-mount relabeling is handled by the helper when detected.
+- Container `HOME` is `/tmp` for host-user execution.
 
 ## Windows regression
 
-The Windows GitHub Actions workflow also passed on the same 1.2.0 source after the macOS port.
+The Windows GitHub Actions workflow passes on 1.3.0:
 
-- Windows CMake/MSVC build: **VERIFIED**.
-- Windows executable smoke test: **VERIFIED**.
-- Windows ZIP-loader smoke test: **VERIFIED**.
-- Windows runtime package smoke test: **VERIFIED**.
+- CMake/MSVC build: **VERIFIED**.
+- executable smoke test: **VERIFIED**.
+- ZIP-loader test: **VERIFIED**.
+- runnable package test: **VERIFIED**.
+
+## macOS regression
+
+The established macOS pipeline covers:
+
+- native Apple Silicon;
+- native Intel;
+- CMake builds on both;
+- ZIP-loader tests;
+- universal `arm64 + x86_64` package assembly;
+- packaged-runtime verification.
 
 ## Existing semantic/reconstruction certification
 
@@ -79,10 +100,3 @@ The Windows GitHub Actions workflow also passed on the same 1.2.0 source after t
 - Semantic DATA bytes represented: **12,382/12,382**.
 - Complete physical board files reconstructable: **13/13**.
 - Previously certified SjASMPlus exact reconstruction: **13/13 files, 35,616/35,616 bytes exact**.
-
-## Repository and packaging
-
-- Source tree contains no Ms. Pac-Man ROM/PROM binaries: **VERIFIED**.
-- Public CI contains no copyrighted ROM/PROM payload.
-- Public macOS ZIP tests use synthetic non-canonical data only to exercise the platform loader.
-- macOS universal package contains project source/runtime assets and ROM-free evidence only.

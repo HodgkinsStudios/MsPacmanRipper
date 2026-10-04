@@ -1,51 +1,73 @@
-# MsPacmanRipper 1.2.0
+# MsPacmanRipper 1.3.0
 
 **Created by Jacob Hodgkins**
 
-Version 1.2.0 is the macOS portability release. MsPacmanRipper now supports macOS, Windows, and Ubuntu/Linux from the same C++17 and Python export pipeline.
+Version 1.3.0 is the container/Linux-distribution release. It adds a tested Docker/OCI distribution path for running the existing MsPacmanRipper pipeline consistently across Docker-capable Linux distributions.
 
-## macOS port
+## Docker / OCI support
 
-- Added native Apple Silicon (`arm64`) support.
-- Added native Intel Mac (`x86_64`) support.
-- Added `build_macos.sh` and `run_macos.sh`.
-- Added a Code::Blocks **Release macOS** target using Clang.
-- Added explicit macOS ZIP loading through the system `/usr/bin/unzip`.
-- The native build uses Apple `clang++` from `xcrun` and the active macOS SDK.
-- Added native macOS CMake verification on both CPU architectures.
-- Added native ZIP-loader smoke tests on both CPU architectures.
-- Added checks preventing accidental Homebrew/MacPorts runtime-library dependencies.
-- Added ad-hoc code signing and signature verification.
-- Added a CI-produced universal `arm64 + x86_64` Mach-O binary assembled from separately verified native slices.
-- Added a runnable universal `.tar.gz` package containing the binary, required exporter/evidence runtime assets, source, and macOS build scripts.
+- Added a multi-stage `Dockerfile`.
+- Runtime image uses Debian Bookworm Slim with Python 3 and `unzip`.
+- Compiler, CMake, and build tools remain outside the runtime stage.
+- Added `.dockerignore` rules that exclude local archives, ROM-style binary files, build output, and repository metadata from the Docker build context.
+- Added `run_docker.sh` for easy ZIP/directory input and output mounting.
+- Helper mounts ROM input read-only and output read/write.
+- Helper runs the container using the invoking Linux user's UID/GID.
+- Helper detects SELinux and adds `:Z` bind-mount labeling where appropriate.
+- Helper supports Docker or Podman.
+- Container runtime uses `HOME=/tmp` to support non-root/host-UID execution cleanly.
 
-The CI artifact is ad-hoc signed rather than Developer ID signed/notarized because the public repository does not contain Apple signing credentials.
+## Published architectures
+
+GitHub Actions builds and executes the image natively on:
+
+- `linux/amd64`;
+- `linux/arm64`.
+
+The workflow then publishes a single multi-architecture image:
+
+```text
+ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0
+ghcr.io/hodgkinsstudios/mspacmanripper:latest
+```
+
+It also uploads a portable multi-architecture OCI archive artifact named:
+
+```text
+MsPacmanRipper-linux-multiarch-oci
+```
 
 ## Verification
 
-The final macOS workflow passed on both Apple Silicon and Intel macOS runners:
+Docker CI verifies on both native CPU architectures:
 
-- direct Apple Clang build: **PASS on arm64 and x86_64**;
-- CMake build: **PASS on arm64 and x86_64**;
-- Python helper validation: **PASS on both**;
-- ZIP input reaches canonical validation: **PASS on both**;
-- architecture checks: **PASS**;
-- code-signature checks: **PASS**;
-- universal binary assembly: **PASS**;
-- packaged-runtime smoke test: **PASS**.
+- image build: **PASS**;
+- reported architecture: **PASS**;
+- `--version`: **PASS**;
+- `--help`: **PASS**;
+- ZIP input reaches canonical validation: **PASS**;
+- host-UID/GID helper execution: **PASS**;
+- helper output directory remains owned by the host user: **PASS**.
 
-The exact 1.2.0 source bundled in the resulting Mac artifact was then rebuilt and tested with the supplied canonical set:
+Publishing verification:
 
-- **13/13** canonical files;
-- **35,616/35,616** canonical bytes;
-- **60** normal export files;
-- **19,541** lines in `program/mspacman.asm`;
-- **35,616** rows in `manifest/board_byte_ownership.csv`.
+- GHCR multi-architecture publish: **PASS**;
+- manifest contains `linux/amd64`: **PASS**;
+- manifest contains `linux/arm64`: **PASS**;
+- portable OCI archive generation/upload: **PASS**.
 
-The Windows workflow also remains green on the same 1.2.0 source.
+The packaged amd64 OCI root filesystem was also extracted locally and run with the supplied canonical Ms. Pac-Man set without uploading those ROMs to public CI:
+
+- `MsPacmanRipper 1.3.0`: **PASS**;
+- canonical files: **13/13**;
+- canonical bytes: **35,616/35,616**;
+- full export: **PASS**;
+- output files: **60**;
+- `program/mspacman.asm`: **19,541 lines**;
+- board byte ownership: **35,616 rows**.
+
+Windows and macOS regression workflows remain green on 1.3.0.
 
 ## Existing reconstruction certification
 
-The established round-trip certification remains 13/13 physical files and 35,616/35,616 bytes exact when SjASMPlus verification is requested.
-
-See `README.md`, `TEST_REPORT.md`, and `LEGAL.md`.
+The established exact reconstruction certification remains 13/13 physical files and 35,616/35,616 bytes exact when SjASMPlus verification is requested.

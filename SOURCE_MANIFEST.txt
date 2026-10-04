@@ -1,4 +1,4 @@
-MsPacmanRipper 1.2.0 source-only project
+MsPacmanRipper 1.3.0 source-only project
 Created by Jacob Hodgkins
 
 Included:
@@ -8,11 +8,17 @@ Included:
 - Ubuntu/Linux build and run scripts
 - Windows build and run batch scripts
 - macOS Apple Clang build and run scripts
+- multi-stage Dockerfile
+- Docker/Podman run helper with host UID/GID and SELinux handling
+- .dockerignore protecting build context from archives/ROM-style binary inputs
 - complete structured disassembly exporter
 - ROM-free semantic evidence required by the exporter
 - Windows GitHub Actions build/package verification
-- native Apple Silicon and Intel macOS GitHub Actions verification
+- native Apple Silicon and Intel macOS verification
 - universal arm64+x86_64 macOS package assembly
+- native linux/amd64 and linux/arm64 container verification
+- GHCR multi-architecture container publishing
+- portable multi-architecture OCI artifact creation
 - public release documentation, license, legal notice, changelog, contribution guide, and security policy
 
 Excluded:
