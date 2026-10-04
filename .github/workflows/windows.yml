@@ -5,6 +5,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   windows:
@@ -50,3 +51,21 @@ jobs:
           }
           Write-Host "Windows ZIP loader reached canonical validation as expected."
           exit 0
+
+      - name: Upload Windows executable
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MsPacmanRipper-Windows
+          path: build/bin/MsPacmanRipper.exe
+
+      - name: Upload source snapshot for cross-platform verification
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MsPacmanRipper-source
+          path: |
+            .
+            !.git
+            !build
+          include-hidden-files: true
