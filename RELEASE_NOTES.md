@@ -1,73 +1,74 @@
-# MsPacmanRipper 1.3.0
+# MsPacmanRipper 1.0
 
 **Created by Jacob Hodgkins**
 
-Version 1.3.0 is the container/Linux-distribution release. It adds a tested Docker/OCI distribution path for running the existing MsPacmanRipper pipeline consistently across Docker-capable Linux distributions.
+Version 1.0 is the first release-ready cross-platform version of MsPacmanRipper. It combines the complete canonical Ms. Pac-Man ROM/PROM validation and structured disassembly pipeline with native Windows and macOS support plus a Docker/OCI distribution path for Linux systems.
 
-## Docker / OCI support
+## Core disassembly pipeline
 
-- Added a multi-stage `Dockerfile`.
-- Runtime image uses Debian Bookworm Slim with Python 3 and `unzip`.
-- Compiler, CMake, and build tools remain outside the runtime stage.
-- Added `.dockerignore` rules that exclude local archives, ROM-style binary files, build output, and repository metadata from the Docker build context.
-- Added `run_docker.sh` for easy ZIP/directory input and output mounting.
-- Helper mounts ROM input read-only and output read/write.
-- Helper runs the container using the invoking Linux user's UID/GID.
-- Helper detects SELinux and adds `:Z` bind-mount labeling where appropriate.
-- Helper supports Docker or Podman.
-- Container runtime uses `HOME=/tmp` to support non-root/host-UID execution cleanly.
+- Validates the canonical 13-file Ms. Pac-Man ROM/PROM set before processing.
+- Produces complete human-readable Z80 source.
+- Exports structured graphics, palette, sound, semantic, and board-ownership data.
+- Produces reconstruction material for all 13 physical devices.
+- Supports optional exact reconstruction verification through SjASMPlus.
+- Keeps ROM/PROM data and generated ROM-derived output out of the public source tree and release artifacts.
 
-## Published architectures
+## Windows
 
-GitHub Actions builds and executes the image natively on:
+- Native Windows 10/11 support.
+- ZIP and directory input.
+- `build_windows.bat` and `run_windows.bat`.
+- Cross-platform CMake support.
+- Code::Blocks **Release Windows** target.
+- GitHub Actions build, ZIP-loader smoke test, package assembly, packaged-runtime test, and artifact upload.
 
-- `linux/amd64`;
-- `linux/arm64`.
+## macOS
 
-The workflow then publishes a single multi-architecture image:
+- Native Apple Silicon (`arm64`) and Intel (`x86_64`) support.
+- `build_macos.sh` and `run_macos.sh`.
+- Code::Blocks **Release macOS** target.
+- Native CI builds on both Mac architectures.
+- Universal `arm64 + x86_64` package assembly.
+- Ad-hoc code signing and signature verification.
+
+## Linux / Docker / OCI
+
+- Native Ubuntu/Linux GCC/CMake build path.
+- Multi-stage Docker image for distro-independent Linux use.
+- Published `linux/amd64` and `linux/arm64` image variants.
+- Docker/Podman helper with host UID/GID output ownership.
+- SELinux-aware bind-mount handling.
+- Debian Bookworm Slim runtime with Python 3 and `unzip`.
+- Build tools remain outside the runtime image.
+- Portable multi-architecture OCI archive artifact.
+
+Published container tags:
 
 ```text
-ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0
+ghcr.io/hodgkinsstudios/mspacmanripper:1.0
 ghcr.io/hodgkinsstudios/mspacmanripper:latest
 ```
 
-It also uploads a portable multi-architecture OCI archive artifact named:
+## Release engineering
 
-```text
-MsPacmanRipper-linux-multiarch-oci
-```
+- Windows, macOS, Docker, and release-readiness GitHub Actions workflows.
+- Native Docker verification on amd64 and arm64 runners.
+- Multi-architecture manifest assembled from the exact native image slices tested by CI.
+- Release-readiness checks for version consistency, repository hygiene, shell/Python syntax, strict Linux compilation, and CLI smoke tests.
+- Cross-platform line-ending policy through `.gitattributes`.
+- Build output, local ROM/archive data, IDE state, and generated artifacts excluded through repository ignore rules.
+- Maintainer release checklist in `RELEASING.md`.
 
 ## Verification
 
-Docker CI verifies on both native CPU architectures:
+The established verification record includes:
 
-- image build: **PASS**;
-- reported architecture: **PASS**;
-- `--version`: **PASS**;
-- `--help`: **PASS**;
-- ZIP input reaches canonical validation: **PASS**;
-- host-UID/GID helper execution: **PASS**;
-- helper output directory remains owned by the host user: **PASS**.
-
-Publishing verification:
-
-- GHCR multi-architecture publish: **PASS**;
-- manifest contains `linux/amd64`: **PASS**;
-- manifest contains `linux/arm64`: **PASS**;
-- portable OCI archive generation/upload: **PASS**.
-
-The packaged amd64 OCI root filesystem was also extracted locally and run with the supplied canonical Ms. Pac-Man set without uploading those ROMs to public CI:
-
-- `MsPacmanRipper 1.3.0`: **PASS**;
 - canonical files: **13/13**;
 - canonical bytes: **35,616/35,616**;
-- full export: **PASS**;
-- output files: **60**;
-- `program/mspacman.asm`: **19,541 lines**;
-- board byte ownership: **35,616 rows**.
+- complete physical files reconstructable: **13/13**;
+- exact reconstruction: **35,616/35,616 bytes**;
+- Docker amd64 and arm64 execution: **PASS**;
+- Windows regression/package path: **PASS**;
+- Apple Silicon, Intel, and universal macOS package paths: **PASS**.
 
-Windows and macOS regression workflows remain green on 1.3.0.
-
-## Existing reconstruction certification
-
-The established exact reconstruction certification remains 13/13 physical files and 35,616/35,616 bytes exact when SjASMPlus verification is requested.
+See `TEST_REPORT.md` for the detailed verification record.

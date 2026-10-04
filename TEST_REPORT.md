@@ -1,4 +1,4 @@
-# MsPacmanRipper 1.3.0 Verification Report
+# MsPacmanRipper 1.0 Verification Report
 
 **Created by Jacob Hodgkins**
 
@@ -10,7 +10,7 @@ The exact amd64 runtime root filesystem from the generated multi-architecture OC
 
 Results:
 
-- `MsPacmanRipper 1.3.0`: **VERIFIED**.
+- `MsPacmanRipper 1.0`: **VERIFIED**.
 - Canonical set identity: **13/13 VERIFIED**.
 - Canonical bytes: **35,616/35,616 VERIFIED**.
 - Full disassembly export: **VERIFIED**.
@@ -51,7 +51,7 @@ GitHub Actions runner: native ARM64 Ubuntu Linux.
 The workflow publishes:
 
 - `ghcr.io/hodgkinsstudios/mspacmanripper:latest`;
-- `ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0`;
+- `ghcr.io/hodgkinsstudios/mspacmanripper:1.0`;
 - a source-SHA tag.
 
 The published OCI index is verified to include both `linux/amd64` and `linux/arm64`.
@@ -73,7 +73,7 @@ The public pipeline contains no Ms. Pac-Man ROM/PROM files.
 
 ## Windows regression
 
-The Windows GitHub Actions workflow passes on 1.3.0:
+The Windows GitHub Actions workflow passes on 1.0:
 
 - CMake/MSVC build: **VERIFIED**.
 - executable smoke test: **VERIFIED**.

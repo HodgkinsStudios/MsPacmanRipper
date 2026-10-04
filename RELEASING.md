@@ -43,17 +43,13 @@ For a release that changes analysis semantics, also run the canonical private/lo
 
 ## 4. Tag
 
-Tags use:
+Tags use the exact project version prefixed with `v`.
 
-```text
-vMAJOR.MINOR.PATCH
-```
-
-Example:
+For version `1.0`:
 
 ```bash
-git tag -a v1.3.0 -m "MsPacmanRipper 1.3.0"
-git push origin v1.3.0
+git tag -a v1.0 -m "MsPacmanRipper 1.0"
+git push origin v1.0
 ```
 
 The tag version must equal `VERSION`. Platform workflows are configured to run for `v*` tag pushes.

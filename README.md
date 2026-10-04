@@ -5,7 +5,7 @@
 [![Docker build](https://github.com/HodgkinsStudios/MsPacmanRipper/actions/workflows/docker.yml/badge.svg)](https://github.com/HodgkinsStudios/MsPacmanRipper/actions/workflows/docker.yml)
 [![Release readiness](https://github.com/HodgkinsStudios/MsPacmanRipper/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/HodgkinsStudios/MsPacmanRipper/actions/workflows/release-readiness.yml)
 
-**Created by Jacob Hodgkins · Version 1.3.0 · MIT licensed**
+**Created by Jacob Hodgkins · Version 1.0 · MIT licensed**
 
 MsPacmanRipper is a cross-platform C++17 command-line tool that validates the supported canonical Ms. Pac-Man arcade ROM/PROM set and produces a complete, structured disassembly package: Z80 source, semantic catalogs, graphics and PROM data, physical-device ownership maps, and reconstruction material.
 
@@ -29,7 +29,7 @@ The Docker image is the recommended distribution-independent Linux option for Fe
 Pull the current release image:
 
 ```bash
-docker pull ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0
+docker pull ghcr.io/hodgkinsstudios/mspacmanripper:1.0
 ```
 
 Then use the repository helper:
@@ -145,7 +145,7 @@ The complete export includes:
 Published image:
 
 ```text
-ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0
+ghcr.io/hodgkinsstudios/mspacmanripper:1.0
 ghcr.io/hodgkinsstudios/mspacmanripper:latest
 ```
 
@@ -165,7 +165,7 @@ docker run --rm \
   --user "$(id -u):$(id -g)" \
   -v "$PWD/mspacman.zip:/input/mspacman.zip:ro" \
   -v "$PWD/output:/output" \
-  ghcr.io/hodgkinsstudios/mspacmanripper:1.3.0 \
+  ghcr.io/hodgkinsstudios/mspacmanripper:1.0 \
   /input/mspacman.zip /output
 ```
 
@@ -205,7 +205,7 @@ SjASMPlus is not bundled in the standard Docker runtime image.
 
 The repository includes [RELEASING.md](RELEASING.md) with the release checklist, version consistency requirements, CI gates, tag convention, and artifact procedure.
 
-Release tags use the form `vMAJOR.MINOR.PATCH`, and tag builds must match the value in `VERSION`.
+Release tags use the form `v<version>`, matching the exact value in `VERSION` (for example, `v1.0`).
 
 ## Contributing
 

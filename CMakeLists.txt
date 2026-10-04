@@ -1,6 +1,6 @@
 # Created by Jacob Hodgkins
 cmake_minimum_required(VERSION 3.16)
-project(MsPacmanRipper LANGUAGES CXX)
+project(MsPacmanRipper VERSION 1.0 LANGUAGES CXX)
 
 add_executable(MsPacmanRipper
     src/main.cpp

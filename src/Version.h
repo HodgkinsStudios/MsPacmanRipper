@@ -2,5 +2,5 @@
 #pragma once
 
 namespace msrip {
-inline constexpr const char* kVersion = "1.3.0";
+inline constexpr const char* kVersion = "1.0";
 }

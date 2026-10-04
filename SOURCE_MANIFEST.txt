@@ -1,4 +1,4 @@
-MsPacmanRipper 1.3.0 source-only project
+MsPacmanRipper 1.0 source-only project
 Created by Jacob Hodgkins
 
 Included:
