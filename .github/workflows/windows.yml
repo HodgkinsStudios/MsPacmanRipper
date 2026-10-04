@@ -30,6 +30,21 @@ jobs:
         shell: pwsh
         run: cmake --build build --config Release
 
-      - name: Smoke test
+      - name: Smoke test executable
         shell: pwsh
         run: .\build\bin\MsPacmanRipper.exe --version
+
+      - name: Smoke test Windows ZIP loader
+        shell: pwsh
+        run: |
+          python -c "import zipfile; z=zipfile.ZipFile(r'build\\smoke.zip','w'); z.writestr('pacman.6e', bytes(4096)); z.close()"
+          $output = & .\build\bin\MsPacmanRipper.exe .\build\smoke.zip .\build\smoke-output 2>&1
+          $exitCode = $LASTEXITCODE
+          $text = $output -join "`n"
+          Write-Host $text
+          if ($exitCode -ne 1) {
+            throw "Expected canonical validation failure after successfully reading test ZIP; got exit code $exitCode"
+          }
+          if ($text -notmatch "canonical Ms. Pac-Man validation failed") {
+            throw "Windows ZIP loader did not reach canonical validation."
+          }
