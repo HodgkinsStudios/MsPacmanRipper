@@ -2,6 +2,21 @@
 
 All notable public changes to MsPacmanRipper are documented here.
 
+## Unreleased
+
+### Added
+
+- Native Windows 10/11 support for ROM directories and ZIP input.
+- `build_windows.bat` and `run_windows.bat` for command-line Windows builds and launches.
+- A Code::Blocks `Release Windows` target that produces `bin/MsPacmanRipper.exe`.
+- Cross-platform CMake configuration and Windows GitHub Actions build verification.
+
+### Changed
+
+- Replaced Unix-only directory traversal with C++17 `std::filesystem`.
+- Added Windows-safe ZIP streaming through the built-in `tar.exe`.
+- Made Python helper-script subprocesses and executable discovery work on Windows.
+
 ## 1.0.0 - 2026-09-04
 
 ### Added
