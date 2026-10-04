@@ -45,7 +45,7 @@ Thumbs.db
 *.tar.gz
 *.rom
 *.bin
-mspacman*
+/mspacman/
 
 # Local verification/output
 *.log
