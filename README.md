@@ -1,9 +1,9 @@
 # MsPacmanRipper
 
 **Created by Jacob Hodgkins**  
-**Version 1.0.0**
+**Version 1.1.0**
 
-MsPacmanRipper is a standalone C++17 command-line tool for **Windows and Ubuntu/Linux** that produces a complete structured disassembly of the supported canonical Ms. Pac-Man arcade ROM/PROM set. The same core source is used on both platforms, with Code::Blocks/GCC, command-line build scripts, and a CMake build available.
+MsPacmanRipper is a standalone C++17 command-line tool for **Windows 10/11 and Ubuntu/Linux** that produces a complete structured disassembly of the supported canonical Ms. Pac-Man arcade ROM/PROM set. Windows and Linux use the same analyzer, ROM validation, daughterboard model, semantic pipeline, and output format.
 
 ## Features
 
@@ -19,32 +19,34 @@ Given the canonical 13-file `mspacman.zip` or a directory containing the same 13
 
 The public source package contains **no Ms. Pac-Man ROM/PROM data** and no pre-generated ROM-derived disassembly tree.
 
-## Platform support
+## Windows
 
-### Windows
-
-The Windows port supports both ZIP input and an extracted ROM directory.
-
-Requirements:
+### Requirements
 
 - Windows 10 or Windows 11;
 - Python 3 available as `python` or `python3`;
-- either Code::Blocks with MinGW/GCC, a `g++` toolchain on `PATH`, or a Visual Studio Developer Command Prompt;
-- the built-in Windows `tar.exe` used to read ZIP input.
+- for source builds: Code::Blocks + MinGW/GCC, another `g++` toolchain, Visual Studio Developer Command Prompt, or CMake;
+- Windows `tar.exe`, which is used to stream ZIP members without adding a third-party ZIP library.
 
-Build from Command Prompt:
+### Build from Command Prompt
 
 ```bat
 build_windows.bat
 ```
 
-Run:
+This produces:
+
+```text
+bin\MsPacmanRipper.exe
+```
+
+### Run
 
 ```bat
 run_windows.bat "C:\path\to\mspacman.zip" "C:\path\to\output"
 ```
 
-or directly:
+or:
 
 ```bat
 bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
@@ -52,7 +54,35 @@ bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
 
 In Code::Blocks, open `MsPacmanRipper.cbp` and build the **Release Windows** target.
 
-### Ubuntu/Linux
+### CMake on Windows
+
+```bat
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+build\bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
+```
+
+The runtime now discovers the bundled export pipeline from nested build layouts such as `build\bin`, and nested verification uses the executable that actually launched the export rather than assuming `bin\MsPacmanRipper.exe`.
+
+### GitHub Actions Windows package
+
+The Windows workflow builds on `windows-latest`, checks all Python helper scripts, compiles the C++ executable, smoke-tests ZIP loading, and publishes a **MsPacmanRipper-Windows** artifact containing the runnable layout:
+
+```text
+MsPacmanRipper/
+├── bin/MsPacmanRipper.exe
+├── scripts/
+├── evidence/
+├── run_windows.bat
+├── README.md
+├── LICENSE
+├── LEGAL.md
+└── VERSION
+```
+
+Python 3 is still required at runtime because the structured export pipeline intentionally uses the bundled Python scripts.
+
+## Ubuntu/Linux
 
 Install the normal build/runtime requirements:
 
@@ -74,20 +104,34 @@ Run:
 
 In Code::Blocks, open `MsPacmanRipper.cbp` and build the **Release** target.
 
-### CMake
-
-A cross-platform CMake build is also available:
+## Cross-platform CMake
 
 ```text
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
-On Windows the executable is `build\bin\MsPacmanRipper.exe`. On single-config Linux generators it is `build/bin/MsPacmanRipper`.
+On Windows the executable is normally `build\bin\MsPacmanRipper.exe`. On single-config Linux generators it is `build/bin/MsPacmanRipper`.
 
-## Verified reconstruction
+## Verification status
 
-Release 1.0.0 was verified against the supported canonical set:
+Version 1.1.0 was reviewed with the canonical 13-file set and the current shared source:
+
+- canonical files validated: **13/13**;
+- canonical bytes validated: **35,616/35,616**;
+- normal full-disassembly export: **VERIFIED**;
+- normal export output files: **60**;
+- primary `program/mspacman.asm`: **19,541 lines**;
+- board byte-ownership rows: **35,616**;
+- normal `build.sh` export and CMake `build/bin` export: **byte-for-byte identical**;
+- CMake executable tested from outside the repository with the normal root `bin` executable removed: **VERIFIED**;
+- current `windows-latest` CMake/MSVC build: **VERIFIED**;
+- Windows ZIP loader reaching canonical validation: **VERIFIED**;
+- packaged Windows runtime layout: **VERIFIED by CI**.
+
+GitHub Actions intentionally does not contain or redistribute the copyrighted ROM/PROM set. The canonical full-export test is therefore kept outside the public CI job, while Windows CI verifies the platform-specific compiler, Python, executable, ZIP-loader, and package paths.
+
+The previously certified exact reconstruction remains:
 
 - physical files reconstructed: **13/13**;
 - physical bytes reconstructed: **35,616/35,616**;
@@ -96,9 +140,7 @@ Release 1.0.0 was verified against the supported canonical set:
 - semantic DATA bytes represented: **12,382/12,382**;
 - program/daughterboard physical bytes represented: **26,624/26,624**.
 
-See `TEST_REPORT.md` for the release verification record.
-
-The Windows port is also compiled on GitHub Actions using the Windows runner. The platform changes keep the canonical validation and structured-export pipeline shared with Linux rather than maintaining a separate Windows implementation.
+See `TEST_REPORT.md` for the verification record.
 
 ## Canonical input
 
@@ -141,18 +183,18 @@ set "SJASMPLUS=C:\path\to\sjasmplus.exe"
 bin\MsPacmanRipper.exe "C:\path\to\mspacman.zip" "C:\path\to\output"
 ```
 
-A successful verified export reports an exact `13/13 files` and `35616/35616 bytes` reconstruction. Immediate verification adds local rebuild/verification artifacts to the selected output directory; these are not part of the public source package.
+A successful verified export reports an exact `13/13 files` and `35616/35616 bytes` reconstruction.
 
 ## Repository layout
 
 ```text
 MsPacmanRipper/
-├── .github/workflows/     Windows build verification
+├── .github/workflows/     Windows build/package verification
 ├── evidence/              ROM-free semantic metadata used by the exporter
 ├── scripts/               structured export and reconstruction verification tools
 ├── src/                   C++17 source
 ├── CMakeLists.txt         cross-platform CMake build
-├── MsPacmanRipper.cbp     Code::Blocks project with Linux and Windows targets
+├── MsPacmanRipper.cbp     Code::Blocks Linux and Windows targets
 ├── VERSION                release version
 ├── build.sh               Ubuntu/Linux command-line build
 ├── run.sh                 Ubuntu/Linux build-if-needed launcher
@@ -160,15 +202,11 @@ MsPacmanRipper/
 └── run_windows.bat        Windows build-if-needed launcher
 ```
 
-## Implementation note
+## Implementation notes
 
 The public program has one normal job and one normal invocation: complete Ms. Pac-Man disassembly. Two `--internal-*` subprocess entry points are implementation plumbing used by the bundled structured exporter to invoke the C++ analyzer and daughterboard logical-image generator.
 
-The ROM loader uses `std::filesystem` on both platforms. ZIP streaming uses `unzip` on Linux and the built-in `tar.exe` on Windows. Python helper scripts are launched through the active Python interpreter so the export pipeline works without Unix executable-bit semantics.
-
-## Output stability
-
-The exporter uses stable descriptive filenames for analysis, semantic evidence, reconstruction material, and verification reports. Generated source remains fully reconstructable and is validated against the complete supported 13-device board set.
+The ROM loader uses C++17 `std::filesystem` on both platforms. ZIP streaming uses `unzip` on Linux and Windows `tar.exe` on Windows. Python helper scripts are launched through the active Python interpreter so Windows does not depend on Unix executable-bit semantics.
 
 ## License and third-party material
 
