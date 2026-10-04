@@ -22,6 +22,11 @@ else()
     target_compile_options(MsPacmanRipper PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+# GCC 8 and older expose C++17 filesystem from the separate stdc++fs library.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+    target_link_libraries(MsPacmanRipper PRIVATE stdc++fs)
+endif()
+
 set_target_properties(MsPacmanRipper PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
