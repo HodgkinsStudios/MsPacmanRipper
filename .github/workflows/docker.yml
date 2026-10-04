@@ -1,0 +1,156 @@
+# Created by Jacob Hodgkins
+name: Docker build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/hodgkinsstudios/mspacmanripper
+
+jobs:
+  test:
+    name: Test Linux container images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "version=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          platforms: linux/amd64
+          tags: mspacripper:test-amd64
+          build-args: |
+            MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=docker-amd64
+
+      - name: Smoke test amd64 executable and ZIP loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/amd64 mspacripper:test-amd64 --version
+          docker run --rm --platform linux/amd64 mspacripper:test-amd64 --help >/dev/null
+          rm -rf docker-ci
+          mkdir -p docker-ci/output-amd64
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('docker-ci/smoke.zip', 'w') as z:
+              z.writestr('pacman.6e', bytes(4096))
+          PY
+          set +e
+          OUTPUT="$(docker run --rm --platform linux/amd64 \
+            -v "$PWD/docker-ci:/work" \
+            mspacripper:test-amd64 /work/smoke.zip /work/output-amd64 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          test "$RC" -eq 1
+          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+
+      - name: Build arm64 test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          platforms: linux/arm64
+          tags: mspacripper:test-arm64
+          build-args: |
+            MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha,scope=docker-arm64
+          cache-to: type=gha,mode=max,scope=docker-arm64
+
+      - name: Smoke test arm64 executable and ZIP loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/arm64 mspacripper:test-arm64 --version
+          docker run --rm --platform linux/arm64 mspacripper:test-arm64 --help >/dev/null
+          mkdir -p docker-ci/output-arm64
+          set +e
+          OUTPUT="$(docker run --rm --platform linux/arm64 \
+            -v "$PWD/docker-ci:/work" \
+            mspacripper:test-arm64 /work/smoke.zip /work/output-arm64 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          test "$RC" -eq 1
+          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+
+  publish:
+    name: Publish multi-architecture image
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "version=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish multi-architecture image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          build-args: |
+            MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha,scope=docker-publish
+          cache-to: type=gha,mode=max,scope=docker-publish
+
+      - name: Build portable OCI archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg MSPACMANRIPPER_VERSION="${{ steps.version.outputs.version }}" \
+            --output type=oci,dest=MsPacmanRipper-linux-multiarch.oci.tar \
+            .
+
+      - name: Upload OCI archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: MsPacmanRipper-linux-multiarch-oci
+          path: MsPacmanRipper-linux-multiarch.oci.tar

@@ -1,0 +1,21 @@
+# Created by Jacob Hodgkins
+.git
+.github
+bin
+obj
+build
+build-*
+dist
+docker-ci
+__pycache__
+*.pyc
+*.pyo
+*.o
+*.obj
+*.exe
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.rom
+*.bin
