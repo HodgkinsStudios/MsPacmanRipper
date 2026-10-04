@@ -1,0 +1,52 @@
+# Created by Jacob Hodgkins
+
+# Build output
+bin/
+obj/
+build/
+build-*/
+dist/
+docker-ci/
+out/
+output/
+tmp/
+
+# C/C++ intermediates
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Code::Blocks / IDE state
+*.layout
+*.depend
+.cbp.user
+.vscode/
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Local ROM/archive material
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.rom
+*.bin
+mspacman*
+
+# Local verification/output
+*.log
+*.tmp

@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible MsPacmanRipper problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **Do not upload ROM/PROM files, generated ROM-derived disassembly, or reconstructed game binaries.**
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: "1.3.0 or commit SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - macOS Apple Silicon
+        - macOS Intel
+        - Ubuntu/Linux native
+        - Docker linux/amd64
+        - Docker linux/arm64
+        - Podman
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide commands/steps without ROM contents.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove ROM data, credentials, and private information before pasting.
+      render: text

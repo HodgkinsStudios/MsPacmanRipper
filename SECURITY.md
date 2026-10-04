@@ -1,13 +1,38 @@
 # Security Policy
 
-## Supported version
+## Supported versions
 
-Security fixes are maintained for the current 1.x release line.
+Security fixes are maintained for the current 1.x release line. Users should normally run the newest published release.
 
 ## Reporting a security issue
 
-Please avoid publishing a security issue with exploit details in a public issue before the maintainer has had an opportunity to review it.
+Please do not publish exploit details in a public issue before the maintainer has had an opportunity to review them.
 
-If private security reporting is enabled for the GitHub repository, use GitHub's private vulnerability reporting feature. Otherwise, open a minimal public issue asking for a private contact method without including sensitive exploit details.
+Preferred reporting path:
 
-Useful reports include the affected version, operating system, reproduction steps, expected behavior, observed behavior, and any relevant diagnostic output that does not contain copyrighted ROM/PROM data.
+1. Use GitHub Private Vulnerability Reporting if it is enabled for this repository.
+2. If private reporting is unavailable, open a minimal public issue requesting a private contact path. Do not include exploit details in that issue.
+
+A useful report includes:
+
+- affected MsPacmanRipper version or commit;
+- operating system / container platform;
+- reproduction steps;
+- expected behavior;
+- observed behavior;
+- relevant diagnostic output.
+
+Do not include copyrighted ROM/PROM data, generated ROM-derived output, private credentials, access tokens, or unrelated personal data.
+
+## Scope
+
+Security reports may include issues in:
+
+- ROM/archive parsing;
+- filesystem/path handling;
+- subprocess execution;
+- build/release automation;
+- Docker/container behavior;
+- packaged runtime behavior.
+
+Ordinary correctness bugs and disassembly inaccuracies should use the normal bug-report issue form.

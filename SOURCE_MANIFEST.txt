@@ -5,20 +5,16 @@ Included:
 - cross-platform C++17 ROM validation, daughterboard decode, Z80 disassembler, stateful analyzer, and semantic tables
 - Code::Blocks project with Linux, Windows, and macOS targets
 - cross-platform CMake build
-- Ubuntu/Linux build and run scripts
-- Windows build and run batch scripts
-- macOS Apple Clang build and run scripts
-- multi-stage Dockerfile
-- Docker/Podman run helper with host UID/GID and SELinux handling
-- .dockerignore protecting build context from archives/ROM-style binary inputs
-- complete structured disassembly exporter
+- Ubuntu/Linux, Windows, and macOS build/run helpers
+- multi-stage Dockerfile and Docker/Podman helper
+- complete structured disassembly/export verification pipeline
 - ROM-free semantic evidence required by the exporter
-- Windows GitHub Actions build/package verification
-- native Apple Silicon and Intel macOS verification
-- universal arm64+x86_64 macOS package assembly
+- Windows, macOS, Docker, and release-readiness GitHub Actions workflows
 - native linux/amd64 and linux/arm64 container verification
-- GHCR multi-architecture container publishing
-- portable multi-architecture OCI artifact creation
+- GHCR multi-architecture publishing and portable OCI artifact creation
+- release process documentation
+- issue templates
+- repository hygiene rules (.gitignore, .gitattributes, .dockerignore)
 - public release documentation, license, legal notice, changelog, contribution guide, and security policy
 
 Excluded:

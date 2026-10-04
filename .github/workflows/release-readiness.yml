@@ -1,0 +1,69 @@
+# Created by Jacob Hodgkins
+name: Release readiness
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_VALUE="$(tr -d '\r\n' < VERSION)"
+          test -n "$VERSION_VALUE"
+          grep -Fq "kVersion = \"$VERSION_VALUE\"" src/Version.h
+          grep -Fq "Version $VERSION_VALUE" README.md
+          grep -Fq "# MsPacmanRipper $VERSION_VALUE" RELEASE_NOTES.md
+          grep -Fq "## $VERSION_VALUE -" CHANGELOG.md
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            test "$GITHUB_REF_NAME" = "v$VERSION_VALUE"
+          fi
+          echo "Version consistency: $VERSION_VALUE"
+
+      - name: Check repository hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check HEAD^ HEAD || git diff --check
+          if git ls-files | grep -E '\.(zip|7z|rar|rom|bin)$' > tracked-forbidden.txt; then
+            echo "Forbidden archive/ROM-style files are tracked:" >&2
+            cat tracked-forbidden.txt >&2
+            exit 1
+          fi
+          test ! -e README
+          test -s README.md
+          test -s LICENSE
+          test -s LEGAL.md
+
+      - name: Check shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n build.sh run.sh run_docker.sh build_macos.sh run_macos.sh
+
+      - name: Check Python scripts
+        shell: bash
+        run: python3 -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
+
+      - name: Strict Linux build
+        shell: bash
+        run: ./build.sh
+
+      - name: Smoke test CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./bin/MsPacmanRipper --version
+          ./bin/MsPacmanRipper --help >/dev/null
