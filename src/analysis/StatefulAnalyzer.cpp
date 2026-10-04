@@ -7,11 +7,12 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <limits>
 #include <sstream>
-#include <sys/stat.h>
+#include <system_error>
 
 namespace msrip::analysis {
 namespace {
@@ -1769,12 +1770,16 @@ void StatefulAnalyzer::rebuildSummary() {
 }
 
 bool StatefulAnalyzer::exportReports(const std::string& outputDir, std::string& error) const {
-    if (mkdir(outputDir.c_str(), 0755) != 0) {
-        struct stat st{};
-        if (stat(outputDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
-            error = "Unable to create analysis output directory: " + outputDir;
-            return false;
-        }
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::create_directories(fs::path(outputDir), ec);
+    if (ec) {
+        error = "Unable to create analysis output directory: " + outputDir + " (" + ec.message() + ")";
+        return false;
+    }
+    if (!fs::is_directory(fs::path(outputDir), ec) || ec) {
+        error = "Analysis output path is not a directory: " + outputDir;
+        return false;
     }
 
     struct PacmanFamilyTransferRecord {
