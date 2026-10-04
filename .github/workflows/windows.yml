@@ -1,0 +1,35 @@
+# Created by Jacob Hodgkins
+name: Windows build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check Python scripts
+        shell: pwsh
+        run: python -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release
+
+      - name: Smoke test
+        shell: pwsh
+        run: .\build\bin\MsPacmanRipper.exe --version
