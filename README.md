@@ -201,33 +201,6 @@ SJASMPLUS=/path/to/sjasmplus ./bin/MsPacmanRipper /path/to/mspacman.zip /path/to
 
 SjASMPlus is not bundled in the standard Docker runtime image.
 
-## Repository layout
-
-```text
-MsPacmanRipper/
-├── .github/               CI and issue templates
-├── evidence/              ROM-free semantic reference data
-├── scripts/               export and verification pipeline
-├── src/                   C++17 implementation
-├── Dockerfile
-├── CMakeLists.txt
-├── MsPacmanRipper.cbp
-├── build.sh
-├── build_windows.bat
-├── build_macos.sh
-├── run.sh
-├── run_windows.bat
-├── run_macos.sh
-├── run_docker.sh
-├── TEST_REPORT.md
-├── RELEASE_NOTES.md
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── LEGAL.md
-└── LICENSE
-```
-
 ## Release process
 
 The repository includes [RELEASING.md](RELEASING.md) with the release checklist, version consistency requirements, CI gates, tag convention, and artifact procedure.
