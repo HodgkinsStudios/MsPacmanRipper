@@ -26,7 +26,10 @@ MSW=Path(WORK_CTX.name); AN=MSW/'analysis'; SRC=MSW/'reassembly_src'; LOG=MSW/'l
 for p in (AN,SRC,LOG): p.mkdir(parents=True,exist_ok=True)
 
 def run(cmd):
-    p=subprocess.run([str(x) for x in cmd],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    argv=[str(x) for x in cmd]
+    if argv and argv[0].lower().endswith('.py'):
+        argv.insert(0,sys.executable)
+    p=subprocess.run(argv,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     if p.returncode:
         raise SystemExit('full-disassembly exporter prerequisite failed:\n'+p.stdout[-12000:])
 
