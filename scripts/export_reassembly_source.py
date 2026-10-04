@@ -476,7 +476,7 @@ def main() -> int:
     # data-semantic verification sidecar: exhaustive semantic owner for every one of the 12,382
     # physical DATA bytes.  It carries addresses/semantic identifiers only, never ROM bytes.
     data_catalog = out / "DATA_SEMANTIC_OWNERSHIP.csv"
-    proc = subprocess.run([str(root / "scripts/verify_data_semantics.py"), str(root), str(rom_path), str(data_catalog)],
+    proc = subprocess.run([sys.executable, str(root / "scripts/verify_data_semantics.py"), str(root), str(rom_path), str(data_catalog)],
                           text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if proc.returncode != 0:
         die("data-semantic verification semantic sidecar generation failed:\n" + proc.stdout[-4000:])
