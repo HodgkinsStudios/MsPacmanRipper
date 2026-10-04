@@ -22,19 +22,25 @@ else
 fi
 
 DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
-ARCH_MODE="${MSPACMANRIPPER_MACOS_ARCHS:-universal}"
+ARCH_MODE="${MSPACMANRIPPER_MACOS_ARCHS:-native}"
 ARCH_FLAGS=()
 case "$ARCH_MODE" in
-  universal)
-    ARCH_FLAGS=(-arch arm64 -arch x86_64)
-    ;;
   native)
+    HOST_ARCH="$(uname -m)"
+    case "$HOST_ARCH" in
+      arm64|x86_64) ARCH_FLAGS=(-arch "$HOST_ARCH") ;;
+      *)
+        echo "ERROR: Unsupported macOS CPU architecture: $HOST_ARCH" >&2
+        exit 2
+        ;;
+    esac
     ;;
   arm64|x86_64)
     ARCH_FLAGS=(-arch "$ARCH_MODE")
     ;;
   *)
-    echo "ERROR: MSPACMANRIPPER_MACOS_ARCHS must be universal, native, arm64, or x86_64." >&2
+    echo "ERROR: MSPACMANRIPPER_MACOS_ARCHS must be native, arm64, or x86_64." >&2
+    echo "Universal binaries are assembled from natively built slices by the macOS CI workflow." >&2
     exit 2
     ;;
 esac

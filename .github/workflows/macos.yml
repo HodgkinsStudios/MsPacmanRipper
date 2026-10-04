@@ -8,8 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  macos:
-    runs-on: macos-latest
+  arm64:
+    name: Apple Silicon
+    runs-on: macos-15
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -19,48 +20,41 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Check macOS toolchain
+      - name: Check toolchain and Python scripts
         shell: bash
         run: |
           set -euo pipefail
           sw_vers
           xcodebuild -version
-          xcrun --find clang++
-          cmake --version
+          test "$(uname -m)" = "arm64"
           /usr/bin/unzip -v | head -n 2
+          python3 -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
 
-      - name: Check Python scripts
-        shell: bash
-        run: python3 -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
-
-      - name: Build universal macOS binary
+      - name: Build Apple Silicon binary
         shell: bash
         run: |
+          set -euo pipefail
           chmod +x build_macos.sh run_macos.sh
-          ./build_macos.sh
+          MSPACMANRIPPER_MACOS_ARCHS=native ./build_macos.sh
           ./bin/MsPacmanRipper --version
           ./bin/MsPacmanRipper --help >/dev/null
-          ARCHS="$(lipo -archs ./bin/MsPacmanRipper)"
-          echo "Architectures: $ARCHS"
-          grep -qw arm64 <<<"$ARCHS"
-          grep -qw x86_64 <<<"$ARCHS"
+          test "$(lipo -archs ./bin/MsPacmanRipper)" = "arm64"
           codesign --verify --strict ./bin/MsPacmanRipper
           if otool -L ./bin/MsPacmanRipper | grep -E '/opt/homebrew|/usr/local'; then
-            echo "ERROR: macOS binary unexpectedly depends on Homebrew/MacPorts-style paths." >&2
+            echo "ERROR: binary unexpectedly depends on non-system package-manager paths." >&2
             exit 1
           fi
 
-      - name: Build universal macOS binary with CMake
+      - name: CMake Apple Silicon build
         shell: bash
         run: |
-          cmake -S . -B build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          set -euo pipefail
+          cmake -S . -B build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           cmake --build build-macos --config Release
           ./build-macos/bin/MsPacmanRipper --version
-          ARCHS="$(lipo -archs ./build-macos/bin/MsPacmanRipper)"
-          grep -qw arm64 <<<"$ARCHS"
-          grep -qw x86_64 <<<"$ARCHS"
+          test "$(lipo -archs ./build-macos/bin/MsPacmanRipper)" = "arm64"
 
-      - name: Smoke test macOS ZIP loader
+      - name: Smoke test Apple Silicon ZIP loader
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +70,123 @@ jobs:
           printf '%s\n' "$OUTPUT"
           test "$RC" -eq 1
           grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+
+      - name: Upload Apple Silicon slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: mspacripper-macos-arm64-slice
+          path: bin/MsPacmanRipper
+          retention-days: 7
+
+  intel:
+    name: Intel
+    runs-on: macos-15-intel
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check toolchain and Python scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcodebuild -version
+          test "$(uname -m)" = "x86_64"
+          /usr/bin/unzip -v | head -n 2
+          python3 -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
+
+      - name: Build Intel binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x build_macos.sh run_macos.sh
+          MSPACMANRIPPER_MACOS_ARCHS=native ./build_macos.sh
+          ./bin/MsPacmanRipper --version
+          ./bin/MsPacmanRipper --help >/dev/null
+          test "$(lipo -archs ./bin/MsPacmanRipper)" = "x86_64"
+          codesign --verify --strict ./bin/MsPacmanRipper
+          if otool -L ./bin/MsPacmanRipper | grep -E '/opt/homebrew|/usr/local'; then
+            echo "ERROR: binary unexpectedly depends on non-system package-manager paths." >&2
+            exit 1
+          fi
+
+      - name: CMake Intel build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          cmake --build build-macos --config Release
+          ./build-macos/bin/MsPacmanRipper --version
+          test "$(lipo -archs ./build-macos/bin/MsPacmanRipper)" = "x86_64"
+
+      - name: Smoke test Intel ZIP loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('build-macos/smoke.zip', 'w') as z:
+              z.writestr('pacman.6e', bytes(4096))
+          PY
+          set +e
+          OUTPUT="$(./bin/MsPacmanRipper ./build-macos/smoke.zip ./build-macos/smoke-output 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          test "$RC" -eq 1
+          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+
+      - name: Upload Intel slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: mspacripper-macos-x86_64-slice
+          path: bin/MsPacmanRipper
+          retention-days: 7
+
+  universal:
+    name: Universal package
+    runs-on: macos-15
+    needs: [arm64, intel]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Download Apple Silicon slice
+        uses: actions/download-artifact@v4
+        with:
+          name: mspacripper-macos-arm64-slice
+          path: slices/arm64
+
+      - name: Download Intel slice
+        uses: actions/download-artifact@v4
+        with:
+          name: mspacripper-macos-x86_64-slice
+          path: slices/x86_64
+
+      - name: Assemble and verify universal binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bin
+          lipo -create slices/arm64/MsPacmanRipper slices/x86_64/MsPacmanRipper -output bin/MsPacmanRipper
+          chmod +x bin/MsPacmanRipper
+          codesign --force --sign - bin/MsPacmanRipper >/dev/null 2>&1
+          ARCHS="$(lipo -archs bin/MsPacmanRipper)"
+          echo "Universal architectures: $ARCHS"
+          grep -qw arm64 <<<"$ARCHS"
+          grep -qw x86_64 <<<"$ARCHS"
+          codesign --verify --strict bin/MsPacmanRipper
+          ./bin/MsPacmanRipper --version
 
       - name: Assemble runnable macOS package
         shell: bash
