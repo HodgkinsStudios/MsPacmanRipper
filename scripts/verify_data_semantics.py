@@ -44,8 +44,9 @@ def main() -> int:
         return 2
     root=Path(sys.argv[1]).resolve(); rom=Path(sys.argv[2]).resolve()
     catalog_out=Path(sys.argv[3]).resolve() if len(sys.argv)==4 else None
-    exe=root/'bin'/'MsPacmanRipper'
-    if not exe.is_file(): fail('bin/MsPacmanRipper is missing; build before verification')
+    exe_candidates=[root/'bin'/'MsPacmanRipper.exe',root/'bin'/'MsPacmanRipper']
+    exe=next((p for p in exe_candidates if p.is_file()),None)
+    if exe is None: fail('bin/MsPacmanRipper(.exe) is missing; build before verification')
     parent_path=root/'evidence'/'pacman_semantic_data_reference.csv'
     target_path=root/'evidence'/'targeted_data_semantics.csv'
     if not parent_path.is_file() or not target_path.is_file(): fail('data-semantic verification evidence ledgers are missing')
