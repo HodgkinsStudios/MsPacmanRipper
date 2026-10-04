@@ -4,10 +4,15 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <dirent.h>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <sys/stat.h>
+#include <system_error>
+
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 namespace msrip {
 namespace {
@@ -28,6 +33,11 @@ bool endsWithInsensitive(const std::string& s, const std::string& suffix) {
 }
 
 std::string shellQuote(const std::string& s) {
+#ifdef _WIN32
+    std::string out = "\"";
+    for (char c : s) out += (c == '\"') ? "\\\"" : std::string(1, c);
+    return out + "\"";
+#else
     std::string out = "'";
     for (char c : s) {
         if (c == '\'') out += "'\\''";
@@ -35,10 +45,30 @@ std::string shellQuote(const std::string& s) {
     }
     out += "'";
     return out;
+#endif
 }
 
-bool readFile(const std::string& path, std::vector<std::uint8_t>& out) {
-    std::ifstream in(path.c_str(), std::ios::binary);
+FILE* openPipe(const std::string& command, bool binary) {
+#ifdef _WIN32
+    FILE* pipe = _popen(command.c_str(), "r");
+    if (pipe && binary) _setmode(_fileno(pipe), _O_BINARY);
+    return pipe;
+#else
+    (void)binary;
+    return popen(command.c_str(), "r");
+#endif
+}
+
+int closePipe(FILE* pipe) {
+#ifdef _WIN32
+    return _pclose(pipe);
+#else
+    return pclose(pipe);
+#endif
+}
+
+bool readFile(const std::filesystem::path& path, std::vector<std::uint8_t>& out) {
+    std::ifstream in(path, std::ios::binary);
     if (!in) return false;
     out.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
     return true;
@@ -88,36 +118,72 @@ void RomSet::addFile(const std::string& displayName, const std::string& sourcePa
 
 bool RomSet::load(const std::string& path, std::string& error) {
     clear();
-    struct stat st{};
-    if (stat(path.c_str(), &st) != 0) { error = "Path does not exist: " + path; return false; }
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path input(path);
+
+    if (!fs::exists(input, ec) || ec) {
+        error = "Path does not exist: " + path;
+        return false;
+    }
+
     bool ok = false;
-    if (S_ISDIR(st.st_mode)) ok = loadDirectory(path, error);
-    else if (S_ISREG(st.st_mode) && endsWithInsensitive(path, ".zip")) ok = loadZip(path, error);
-    else error = "MsPacmanRipper accepts a ROM directory or .zip archive.";
+    if (fs::is_directory(input, ec) && !ec) {
+        ok = loadDirectory(path, error);
+    } else if (fs::is_regular_file(input, ec) && !ec && endsWithInsensitive(path, ".zip")) {
+        ok = loadZip(path, error);
+    } else {
+        error = "MsPacmanRipper accepts a ROM directory or .zip archive.";
+    }
+
     if (ok) { loaded_ = true; sourcePath_ = path; }
     return ok;
 }
 
 bool RomSet::loadDirectory(const std::string& path, std::string& error) {
-    DIR* d = opendir(path.c_str());
-    if (!d) { error = "Unable to open ROM directory."; return false; }
-    while (dirent* ent = readdir(d)) {
-        if (ent->d_name[0] == '.') continue;
-        const std::string full = path + "/" + ent->d_name;
-        struct stat st{};
-        if (stat(full.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) continue;
+    namespace fs = std::filesystem;
+    std::error_code ec;
+
+    for (fs::directory_iterator it(fs::path(path), ec), end; !ec && it != end; it.increment(ec)) {
+        const fs::directory_entry& entry = *it;
+        if (!entry.is_regular_file(ec) || ec) {
+            ec.clear();
+            continue;
+        }
+
         std::vector<std::uint8_t> data;
-        if (readFile(full, data)) addFile(ent->d_name, full, std::move(data));
+        if (readFile(entry.path(), data)) {
+            addFile(entry.path().filename().string(), entry.path().string(), std::move(data));
+        }
     }
-    closedir(d);
+
+    if (ec) {
+        error = "Unable to read ROM directory: " + ec.message();
+        return false;
+    }
     if (files_.empty()) { error = "ROM directory contained no readable files."; return false; }
     return true;
 }
 
 bool RomSet::loadZip(const std::string& path, std::string& error) {
+#ifdef _WIN32
+    // Modern supported Windows versions ship bsdtar as tar.exe. Use it directly so
+    // the Windows port needs no third-party ZIP library or Unix compatibility layer.
+    const std::string listCmd = "tar -tf " + shellQuote(path) + " 2>NUL";
+#else
     const std::string listCmd = "unzip -Z1 " + shellQuote(path) + " 2>/dev/null";
-    FILE* pipe = popen(listCmd.c_str(), "r");
-    if (!pipe) { error = "Unable to launch unzip. Install Ubuntu package 'unzip'."; return false; }
+#endif
+
+    FILE* pipe = openPipe(listCmd, false);
+    if (!pipe) {
+#ifdef _WIN32
+        error = "Unable to launch Windows tar.exe to read the ZIP archive.";
+#else
+        error = "Unable to launch unzip. Install Ubuntu package 'unzip'.";
+#endif
+        return false;
+    }
+
     std::vector<std::string> names;
     char line[4096];
     while (std::fgets(line, sizeof(line), pipe)) {
@@ -125,13 +191,18 @@ bool RomSet::loadZip(const std::string& path, std::string& error) {
         while (!n.empty() && (n.back() == '\n' || n.back() == '\r')) n.pop_back();
         if (!n.empty() && n.back() != '/') names.push_back(n);
     }
-    const int listRc = pclose(pipe);
+    const int listRc = closePipe(pipe);
     if (listRc != 0 || names.empty()) { error = "Could not read ZIP archive."; return false; }
 
     for (const std::string& name : names) {
+#ifdef _WIN32
+        const std::string cmd = "tar -xOf " + shellQuote(path) + " -- " + shellQuote(name) + " 2>NUL";
+#else
         const std::string cmd = "unzip -p " + shellQuote(path) + " " + shellQuote(name) + " 2>/dev/null";
-        FILE* fp = popen(cmd.c_str(), "r");
+#endif
+        FILE* fp = openPipe(cmd, true);
         if (!fp) continue;
+
         std::vector<std::uint8_t> data;
         std::uint8_t buf[8192];
         for (;;) {
@@ -139,9 +210,11 @@ bool RomSet::loadZip(const std::string& path, std::string& error) {
             if (got) data.insert(data.end(), buf, buf + got);
             if (got < sizeof(buf)) break;
         }
-        const int rc = pclose(fp);
+
+        const int rc = closePipe(fp);
         if (rc == 0) addFile(name, path + ":" + name, std::move(data));
     }
+
     if (files_.empty()) { error = "ZIP was readable but no files could be extracted."; return false; }
     return true;
 }
