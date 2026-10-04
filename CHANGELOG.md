@@ -4,6 +4,34 @@ All notable public changes to MsPacmanRipper are documented here.
 
 ## Unreleased
 
+## 1.2.0 - 2026-10-04
+
+### Added
+
+- Native macOS support for Apple Silicon (`arm64`) and Intel (`x86_64`).
+- `build_macos.sh` and `run_macos.sh`.
+- A Code::Blocks **Release macOS** target.
+- macOS GitHub Actions builds on native Apple Silicon and native Intel runners.
+- Independent direct-Clang and CMake validation for both Mac architectures.
+- A universal `arm64 + x86_64` CI package assembled from verified native slices.
+- Ad-hoc code signing and signature validation for the Mac executable.
+- macOS package/runtime smoke testing and architecture verification.
+
+### Changed
+
+- macOS ZIP input now uses the system `/usr/bin/unzip` explicitly.
+- The macOS build script uses Apple `clang++` and SDK discovery through `xcrun`.
+- The macOS build no longer trusts a generic inherited `CXX` environment variable; a custom compiler can be selected explicitly with `MSPACMANRIPPER_CXX`.
+- Public documentation, release notes, source manifest, and verification report now cover macOS.
+
+### Verified
+
+- Apple Silicon direct build, CMake build, and ZIP loader: **PASS**.
+- Intel direct build, CMake build, and ZIP loader: **PASS**.
+- Universal Mach-O assembly, code signature, package extraction, and packaged runtime: **PASS**.
+- Exact 1.2.0 package source with the supplied canonical set: **13/13 files, 35,616/35,616 bytes, 60 export files**.
+- Windows CI remains green on 1.2.0.
+
 ## 1.1.0 - 2026-10-04
 
 ### Added
@@ -22,14 +50,6 @@ All notable public changes to MsPacmanRipper are documented here.
 - Made Python helper-script subprocesses portable to Windows.
 - Made project-root discovery walk ancestor directories so nested CMake build layouts work.
 - Made semantic verification use the active MsPacmanRipper executable instead of assuming a fixed `bin` path.
-- Updated README, release notes, source manifest, and verification report for Windows support.
-
-### Verified
-
-- Canonical 13-file / 35,616-byte set validates with the current source.
-- Normal full export produces 60 files and a 19,541-line primary assembly source.
-- Normal and CMake full-export trees are byte-for-byte identical.
-- Current `windows-latest` CMake/MSVC build and Windows ZIP-loader smoke test pass.
 
 ## 1.0.0 - 2026-09-04
 

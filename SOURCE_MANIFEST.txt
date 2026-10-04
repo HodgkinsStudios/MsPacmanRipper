@@ -1,19 +1,23 @@
-MsPacmanRipper 1.1.0 source-only project
+MsPacmanRipper 1.2.0 source-only project
 Created by Jacob Hodgkins
 
 Included:
 - cross-platform C++17 ROM validation, daughterboard decode, Z80 disassembler, stateful analyzer, and semantic tables
-- Code::Blocks project with Linux and Windows targets
-- CMake cross-platform build
+- Code::Blocks project with Linux, Windows, and macOS targets
+- cross-platform CMake build
 - Ubuntu/Linux build and run scripts
 - Windows build and run batch scripts
+- macOS Apple Clang build and run scripts
 - complete structured disassembly exporter
 - ROM-free semantic evidence required by the exporter
 - Windows GitHub Actions build/package verification
+- native Apple Silicon and Intel macOS GitHub Actions verification
+- universal arm64+x86_64 macOS package assembly
 - public release documentation, license, legal notice, changelog, contribution guide, and security policy
 
 Excluded:
 - Ms. Pac-Man ROM/PROM binaries
 - pre-generated ROM-derived disassembly output
 - reconstructed game binaries
+- Apple Developer ID signing credentials
 - compiler output and local IDE state

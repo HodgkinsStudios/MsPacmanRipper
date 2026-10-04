@@ -1,37 +1,48 @@
-# MsPacmanRipper 1.1.0
+# MsPacmanRipper 1.2.0
 
 **Created by Jacob Hodgkins**
 
-Version 1.1.0 is the Windows portability release. MsPacmanRipper now supports Windows 10/11 and Ubuntu/Linux from the same C++17 and Python export pipeline.
+Version 1.2.0 is the macOS portability release. MsPacmanRipper now supports macOS, Windows, and Ubuntu/Linux from the same C++17 and Python export pipeline.
 
-## Windows port
+## macOS port
 
-- Added native Windows ROM-directory and ZIP input support.
-- Replaced Unix-only directory traversal with C++17 `std::filesystem`.
-- Added Windows ZIP streaming through the built-in `tar.exe`.
-- Added Windows-safe `_popen`/binary-pipe handling.
-- Added `build_windows.bat` and `run_windows.bat`.
-- Added a Code::Blocks **Release Windows** target.
-- Added cross-platform CMake configuration.
-- Added `windows-latest` GitHub Actions compilation and smoke tests.
-- Added a runnable Windows CI artifact containing the executable plus required `scripts/` and `evidence/` runtime assets.
-- Updated helper-script launching so Python files work without Unix executable-bit semantics.
-- Updated semantic verification so it follows the executable that actually launched the export.
-- Updated project-root discovery so nested CMake layouts such as `build/bin` work even when launched outside the repository root.
+- Added native Apple Silicon (`arm64`) support.
+- Added native Intel Mac (`x86_64`) support.
+- Added `build_macos.sh` and `run_macos.sh`.
+- Added a Code::Blocks **Release macOS** target using Clang.
+- Added explicit macOS ZIP loading through the system `/usr/bin/unzip`.
+- The native build uses Apple `clang++` from `xcrun` and the active macOS SDK.
+- Added native macOS CMake verification on both CPU architectures.
+- Added native ZIP-loader smoke tests on both CPU architectures.
+- Added checks preventing accidental Homebrew/MacPorts runtime-library dependencies.
+- Added ad-hoc code signing and signature verification.
+- Added a CI-produced universal `arm64 + x86_64` Mach-O binary assembled from separately verified native slices.
+- Added a runnable universal `.tar.gz` package containing the binary, required exporter/evidence runtime assets, source, and macOS build scripts.
+
+The CI artifact is ad-hoc signed rather than Developer ID signed/notarized because the public repository does not contain Apple signing credentials.
 
 ## Verification
 
-The canonical 13-file set was validated and fully exported with the current shared source:
+The final macOS workflow passed on both Apple Silicon and Intel macOS runners:
 
-- 13/13 canonical files and 35,616/35,616 bytes validated;
-- 60 normal export files produced;
-- `program/mspacman.asm` contains 19,541 lines;
-- `manifest/board_byte_ownership.csv` contains 35,616 byte-owner rows;
-- normal and CMake exports were byte-for-byte identical;
-- the CMake executable was exercised from outside the repository with the root `bin` executable absent;
-- the current Windows CI build, Python checks, executable smoke test, ZIP-loader smoke test, and packaged-runtime smoke test pass.
+- direct Apple Clang build: **PASS on arm64 and x86_64**;
+- CMake build: **PASS on arm64 and x86_64**;
+- Python helper validation: **PASS on both**;
+- ZIP input reaches canonical validation: **PASS on both**;
+- architecture checks: **PASS**;
+- code-signature checks: **PASS**;
+- universal binary assembly: **PASS**;
+- packaged-runtime smoke test: **PASS**.
 
-The project does not upload or redistribute Ms. Pac-Man ROM/PROM data in GitHub Actions.
+The exact 1.2.0 source bundled in the resulting Mac artifact was then rebuilt and tested with the supplied canonical set:
+
+- **13/13** canonical files;
+- **35,616/35,616** canonical bytes;
+- **60** normal export files;
+- **19,541** lines in `program/mspacman.asm`;
+- **35,616** rows in `manifest/board_byte_ownership.csv`.
+
+The Windows workflow also remains green on the same 1.2.0 source.
 
 ## Existing reconstruction certification
 
