@@ -9,7 +9,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <sys/stat.h>
 
 namespace {
 
@@ -39,21 +38,32 @@ bool loadCanonical(const std::string& path, msrip::RomSet& roms) {
 
 std::filesystem::path findProjectRoot(const char* argv0) {
     namespace fs = std::filesystem;
-    std::error_code ec;
 
+    auto searchAncestors = [](fs::path current) -> fs::path {
+        for (int depth = 0; depth < 8 && !current.empty(); ++depth) {
+            std::error_code scriptEc;
+            std::error_code evidenceEc;
+            const bool hasScript = fs::is_regular_file(current / "scripts" / "export_full_disassembly.py", scriptEc);
+            const bool hasEvidence = fs::is_regular_file(current / "evidence" / "pacman_public_semantic_family_catalog.csv", evidenceEc);
+            if (!scriptEc && !evidenceEc && hasScript && hasEvidence) return current;
+
+            const fs::path parent = current.parent_path();
+            if (parent.empty() || parent == current) break;
+            current = parent;
+        }
+        return {};
+    };
+
+    std::error_code ec;
     const fs::path cwd = fs::current_path(ec);
-    if (!ec && fs::is_regular_file(cwd / "scripts" / "export_full_disassembly.py", ec))
-        return cwd;
+    if (!ec) {
+        if (const fs::path root = searchAncestors(cwd); !root.empty()) return root;
+    }
 
     ec.clear();
     const fs::path exe = fs::absolute(fs::path(argv0), ec);
     if (!ec) {
-        const fs::path parent = exe.parent_path();
-        if (fs::is_regular_file(parent / "scripts" / "export_full_disassembly.py", ec))
-            return parent;
-        ec.clear();
-        if (fs::is_regular_file(parent.parent_path() / "scripts" / "export_full_disassembly.py", ec))
-            return parent.parent_path();
+        if (const fs::path root = searchAncestors(exe.parent_path()); !root.empty()) return root;
     }
     return {};
 }
