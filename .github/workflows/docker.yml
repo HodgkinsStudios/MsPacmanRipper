@@ -87,6 +87,22 @@ jobs:
           test "$RC" -eq 1
           grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
 
+      - name: Smoke test host-user helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x run_docker.sh
+          rm -rf docker-ci/helper-output
+          set +e
+          OUTPUT="$(MSPACMANRIPPER_IMAGE=mspacripper:test-${{ matrix.arch }} \
+            ./run_docker.sh docker-ci/smoke.zip docker-ci/helper-output 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          test "$RC" -eq 1
+          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+          test "$(stat -c '%u' docker-ci/helper-output)" = "$(id -u)"
+
   publish:
     name: Publish multi-architecture image
     if: github.event_name != 'pull_request'
