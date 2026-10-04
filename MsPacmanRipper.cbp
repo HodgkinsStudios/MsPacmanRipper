@@ -35,6 +35,9 @@
           <Add option="-std=c++17" />
           <Add directory="src" />
         </Compiler>
+        <Linker>
+          <Add option="-lstdc++fs" />
+        </Linker>
       </Target>
     </Build>
     <Unit filename="src/main.cpp" />
