@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git diff --check HEAD^ HEAD || git diff --check
+          git diff --check HEAD^ HEAD
           if git ls-files | grep -E '\.(zip|7z|rar|rom|bin)$' > tracked-forbidden.txt; then
             echo "Forbidden archive/ROM-style files are tracked:" >&2
             cat tracked-forbidden.txt >&2
