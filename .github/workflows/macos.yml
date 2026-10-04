@@ -1,0 +1,111 @@
+# Created by Jacob Hodgkins
+name: macOS build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check macOS toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcodebuild -version
+          xcrun --find clang++
+          cmake --version
+          /usr/bin/unzip -v | head -n 2
+
+      - name: Check Python scripts
+        shell: bash
+        run: python3 -m py_compile scripts/export_full_disassembly.py scripts/export_reassembly_source.py scripts/verify_data_semantics.py scripts/verify_semantic_families.py
+
+      - name: Build universal macOS binary
+        shell: bash
+        run: |
+          chmod +x build_macos.sh run_macos.sh
+          ./build_macos.sh
+          ./bin/MsPacmanRipper --version
+          ./bin/MsPacmanRipper --help >/dev/null
+          ARCHS="$(lipo -archs ./bin/MsPacmanRipper)"
+          echo "Architectures: $ARCHS"
+          grep -qw arm64 <<<"$ARCHS"
+          grep -qw x86_64 <<<"$ARCHS"
+          codesign --verify --strict ./bin/MsPacmanRipper
+          if otool -L ./bin/MsPacmanRipper | grep -E '/opt/homebrew|/usr/local'; then
+            echo "ERROR: macOS binary unexpectedly depends on Homebrew/MacPorts-style paths." >&2
+            exit 1
+          fi
+
+      - name: Build universal macOS binary with CMake
+        shell: bash
+        run: |
+          cmake -S . -B build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          cmake --build build-macos --config Release
+          ./build-macos/bin/MsPacmanRipper --version
+          ARCHS="$(lipo -archs ./build-macos/bin/MsPacmanRipper)"
+          grep -qw arm64 <<<"$ARCHS"
+          grep -qw x86_64 <<<"$ARCHS"
+
+      - name: Smoke test macOS ZIP loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('build-macos/smoke.zip', 'w') as z:
+              z.writestr('pacman.6e', bytes(4096))
+          PY
+          set +e
+          OUTPUT="$(./bin/MsPacmanRipper ./build-macos/smoke.zip ./build-macos/smoke-output 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          test "$RC" -eq 1
+          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
+
+      - name: Assemble runnable macOS package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="dist/MsPacmanRipper"
+          mkdir -p "$ROOT/bin"
+          cp bin/MsPacmanRipper "$ROOT/bin/MsPacmanRipper"
+          cp -R scripts "$ROOT/scripts"
+          cp -R evidence "$ROOT/evidence"
+          cp -R src "$ROOT/src"
+          cp CMakeLists.txt MsPacmanRipper.cbp build_macos.sh run_macos.sh README.md LICENSE LEGAL.md VERSION "$ROOT/"
+          chmod +x "$ROOT/bin/MsPacmanRipper" "$ROOT/build_macos.sh" "$ROOT/run_macos.sh"
+          codesign --verify --strict "$ROOT/bin/MsPacmanRipper"
+          tar -czf dist/MsPacmanRipper-macOS-universal.tar.gz -C dist MsPacmanRipper
+
+      - name: Smoke test packaged runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP="$(mktemp -d)"
+          tar -xzf dist/MsPacmanRipper-macOS-universal.tar.gz -C "$TMP"
+          cd "$TMP/MsPacmanRipper"
+          ./bin/MsPacmanRipper --version
+          ARCHS="$(lipo -archs ./bin/MsPacmanRipper)"
+          grep -qw arm64 <<<"$ARCHS"
+          grep -qw x86_64 <<<"$ARCHS"
+
+      - name: Upload runnable macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: MsPacmanRipper-macOS-universal
+          path: dist/MsPacmanRipper-macOS-universal.tar.gz

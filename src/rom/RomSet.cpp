@@ -170,6 +170,10 @@ bool RomSet::loadZip(const std::string& path, std::string& error) {
     // Modern supported Windows versions ship bsdtar as tar.exe. Use it directly so
     // the Windows port needs no third-party ZIP library or Unix compatibility layer.
     const std::string listCmd = "tar -tf " + shellQuote(path) + " 2>NUL";
+#elif defined(__APPLE__)
+    // macOS ships /usr/bin/unzip. Use the system path explicitly so ZIP loading does
+    // not depend on Homebrew, MacPorts, or shell PATH customization.
+    const std::string listCmd = "/usr/bin/unzip -Z1 " + shellQuote(path) + " 2>/dev/null";
 #else
     const std::string listCmd = "unzip -Z1 " + shellQuote(path) + " 2>/dev/null";
 #endif
@@ -197,6 +201,8 @@ bool RomSet::loadZip(const std::string& path, std::string& error) {
     for (const std::string& name : names) {
 #ifdef _WIN32
         const std::string cmd = "tar -xOf " + shellQuote(path) + " -- " + shellQuote(name) + " 2>NUL";
+#elif defined(__APPLE__)
+        const std::string cmd = "/usr/bin/unzip -p " + shellQuote(path) + " " + shellQuote(name) + " 2>/dev/null";
 #else
         const std::string cmd = "unzip -p " + shellQuote(path) + " " + shellQuote(name) + " 2>/dev/null";
 #endif
