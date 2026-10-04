@@ -48,3 +48,5 @@ jobs:
           if ($text -notmatch "canonical Ms. Pac-Man validation failed") {
             throw "Windows ZIP loader did not reach canonical validation."
           }
+          Write-Host "Windows ZIP loader reached canonical validation as expected."
+          exit 0
