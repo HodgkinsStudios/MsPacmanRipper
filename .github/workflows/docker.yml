@@ -16,8 +16,20 @@ env:
 
 jobs:
   test:
-    name: Test Linux container images
-    runs-on: ubuntu-latest
+    name: Test ${{ matrix.arch }} Linux image
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            platform: linux/amd64
+            machine: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            machine: aarch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -27,70 +39,48 @@ jobs:
         shell: bash
         run: echo "version=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build amd64 test image
+      - name: Build native ${{ matrix.arch }} test image
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
-          platforms: linux/amd64
-          tags: mspacripper:test-amd64
+          platforms: ${{ matrix.platform }}
+          tags: mspacripper:test-${{ matrix.arch }}
           build-args: |
             MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
-          cache-from: type=gha,scope=docker-amd64
-          cache-to: type=gha,mode=max,scope=docker-amd64
+          cache-from: type=gha,scope=docker-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
 
-      - name: Smoke test amd64 executable and ZIP loader
+      - name: Verify native architecture
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --platform linux/amd64 mspacripper:test-amd64 --version
-          docker run --rm --platform linux/amd64 mspacripper:test-amd64 --help >/dev/null
+          ACTUAL="$(docker run --rm --entrypoint /bin/uname mspacripper:test-${{ matrix.arch }} -m)"
+          echo "Container machine: $ACTUAL"
+          test "$ACTUAL" = "${{ matrix.machine }}"
+
+      - name: Smoke test executable and ZIP loader
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm mspacripper:test-${{ matrix.arch }} --version
+          docker run --rm mspacripper:test-${{ matrix.arch }} --help >/dev/null
+
           rm -rf docker-ci
-          mkdir -p docker-ci/output-amd64
+          mkdir -p docker-ci/output
           python3 - <<'PY'
           import zipfile
           with zipfile.ZipFile('docker-ci/smoke.zip', 'w') as z:
               z.writestr('pacman.6e', bytes(4096))
           PY
-          set +e
-          OUTPUT="$(docker run --rm --platform linux/amd64 \
-            -v "$PWD/docker-ci:/work" \
-            mspacripper:test-amd64 /work/smoke.zip /work/output-amd64 2>&1)"
-          RC=$?
-          set -e
-          printf '%s\n' "$OUTPUT"
-          test "$RC" -eq 1
-          grep -q "canonical Ms. Pac-Man validation failed" <<<"$OUTPUT"
 
-      - name: Build arm64 test image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          load: true
-          platforms: linux/arm64
-          tags: mspacripper:test-arm64
-          build-args: |
-            MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
-          cache-from: type=gha,scope=docker-arm64
-          cache-to: type=gha,mode=max,scope=docker-arm64
-
-      - name: Smoke test arm64 executable and ZIP loader
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm --platform linux/arm64 mspacripper:test-arm64 --version
-          docker run --rm --platform linux/arm64 mspacripper:test-arm64 --help >/dev/null
-          mkdir -p docker-ci/output-arm64
           set +e
-          OUTPUT="$(docker run --rm --platform linux/arm64 \
+          OUTPUT="$(docker run --rm \
             -v "$PWD/docker-ci:/work" \
-            mspacripper:test-arm64 /work/smoke.zip /work/output-arm64 2>&1)"
+            mspacripper:test-${{ matrix.arch }} /work/smoke.zip /work/output 2>&1)"
           RC=$?
           set -e
           printf '%s\n' "$OUTPUT"
@@ -101,7 +91,7 @@ jobs:
     name: Publish multi-architecture image
     if: github.event_name != 'pull_request'
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -111,7 +101,7 @@ jobs:
         shell: bash
         run: echo "version=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Set up QEMU
+      - name: Set up QEMU for multi-platform assembly
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -136,8 +126,19 @@ jobs:
             ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           build-args: |
             MSPACMANRIPPER_VERSION=${{ steps.version.outputs.version }}
-          cache-from: type=gha,scope=docker-publish
+          cache-from: |
+            type=gha,scope=docker-amd64
+            type=gha,scope=docker-arm64
+            type=gha,scope=docker-publish
           cache-to: type=gha,mode=max,scope=docker-publish
+
+      - name: Verify published manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "${IMAGE_NAME}:${{ steps.version.outputs.version }}" | tee manifest.txt
+          grep -q 'linux/amd64' manifest.txt
+          grep -q 'linux/arm64' manifest.txt
 
       - name: Build portable OCI archive
         shell: bash
@@ -146,6 +147,9 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg MSPACMANRIPPER_VERSION="${{ steps.version.outputs.version }}" \
+            --cache-from type=gha,scope=docker-amd64 \
+            --cache-from type=gha,scope=docker-arm64 \
+            --cache-from type=gha,scope=docker-publish \
             --output type=oci,dest=MsPacmanRipper-linux-multiarch.oci.tar \
             .
 
