@@ -18,6 +18,7 @@ ap.add_argument('rom_input',type=Path)
 ap.add_argument('output_dir',type=Path)
 a=ap.parse_args()
 ROOT=a.repo_root.resolve(); TOOL=a.tool_exe.resolve(); ROMZIP=a.rom_input.resolve(); OUT=a.output_dir.resolve()
+os.environ['MSPACMANRIPPER_EXE']=str(TOOL)
 if not (ROOT/'evidence/pacman_public_semantic_family_catalog.csv').is_file():
     raise SystemExit('full-disassembly exporter: missing frozen Pac-Man public semantic catalog')
 if OUT.exists(): shutil.rmtree(OUT)
