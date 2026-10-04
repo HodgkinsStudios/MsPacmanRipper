@@ -11,15 +11,20 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 mkdir -p bin obj/macos
 
-if [[ -n "${CXX:-}" ]]; then
-  CXX_BIN="$CXX"
+if ! command -v xcrun >/dev/null 2>&1; then
+  echo "ERROR: Xcode Command Line Tools are required. Run: xcode-select --install" >&2
+  exit 1
+fi
+
+if [[ -n "${MSPACMANRIPPER_CXX:-}" ]]; then
+  CXX_BIN="$MSPACMANRIPPER_CXX"
 else
-  if ! command -v xcrun >/dev/null 2>&1; then
-    echo "ERROR: Xcode Command Line Tools are required. Run: xcode-select --install" >&2
-    exit 1
-  fi
   CXX_BIN="$(xcrun --find clang++)"
 fi
+SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+echo "Compiler: $CXX_BIN"
+"$CXX_BIN" --version | head -n 1
+echo "SDK: $SDKROOT"
 
 DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
 ARCH_MODE="${MSPACMANRIPPER_MACOS_ARCHS:-native}"
@@ -45,7 +50,7 @@ case "$ARCH_MODE" in
     ;;
 esac
 
-COMMON=(-std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror "-mmacosx-version-min=$DEPLOYMENT_TARGET" -I"$ROOT/src")
+COMMON=(-std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror "-mmacosx-version-min=$DEPLOYMENT_TARGET" -isysroot "$SDKROOT" -I"$ROOT/src")
 SOURCES=(
   "$ROOT/src/main.cpp"
   "$ROOT/src/crypto/Hash.cpp"
@@ -66,7 +71,7 @@ for src in "${SOURCES[@]}"; do
   OBJECTS+=("$obj")
 done
 
-"$CXX_BIN" "${ARCH_FLAGS[@]}" "-mmacosx-version-min=$DEPLOYMENT_TARGET" "${OBJECTS[@]}" -o "$ROOT/bin/MsPacmanRipper"
+"$CXX_BIN" "${ARCH_FLAGS[@]}" "-mmacosx-version-min=$DEPLOYMENT_TARGET" -isysroot "$SDKROOT" "${OBJECTS[@]}" -o "$ROOT/bin/MsPacmanRipper"
 
 # Ad-hoc signing gives the locally built Mach-O a valid code signature without requiring
 # a Developer ID certificate. Distribution notarization is intentionally not implied.
