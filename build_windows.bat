@@ -1,6 +1,6 @@
 @echo off
 rem Created by Jacob Hodgkins
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
 if not exist bin mkdir bin
@@ -17,8 +17,8 @@ where g++ >nul 2>&1
 if not errorlevel 1 (
     set "FS_LIB="
     for /f "tokens=1 delims=." %%V in ('g++ -dumpversion') do set "GXX_MAJOR=%%V"
-    if defined GXX_MAJOR if %GXX_MAJOR% LSS 9 set "FS_LIB=-lstdc++fs"
-    g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -Isrc %SOURCES% -o bin\MsPacmanRipper.exe %FS_LIB%
+    if defined GXX_MAJOR if !GXX_MAJOR! LSS 9 set "FS_LIB=-lstdc++fs"
+    g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -Isrc %SOURCES% -o bin\MsPacmanRipper.exe !FS_LIB!
     if errorlevel 1 exit /b %errorlevel%
     goto :built
 )
